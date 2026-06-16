@@ -126,8 +126,8 @@ static esp_err_t get_handler(httpd_req_t *req) {
   }
   esp_wifi_scan_get_ap_records(&ap_count, ap_records);
 
-  // Build <option> list — roughly 64 bytes per entry
-  size_t opts_size = ap_count * 64 + 64;
+  // Build <option> list — each entry: template(~27 bytes) + 2x SSID (max 32 bytes each)
+  size_t opts_size = ap_count * 96 + 64;
   char *opts = (char *)malloc(opts_size);
   if (!opts) {
     free(ap_records);
@@ -137,7 +137,7 @@ static esp_err_t get_handler(httpd_req_t *req) {
   opts[0] = '\0';
   strlcat(opts, "<option value=''>Select a network...</option>", opts_size);
   for (uint16_t i = 0; i < ap_count; i++) {
-    char opt[80];
+    char opt[96];
     snprintf(opt, sizeof(opt), "<option value='%s'>%s</option>",
              (char *)ap_records[i].ssid, (char *)ap_records[i].ssid);
     strlcat(opts, opt, opts_size);
