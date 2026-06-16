@@ -35,6 +35,7 @@ idf_component_register(
     "lvgl/views/logo.c"
     "lvgl/views/passkey.c"
     "lvgl/views/weather.c"
+    "lvgl/views/wifi_setup.c"
     "main.c"
     "tasks/ble.c"
     "tasks/eink_display.c"
@@ -46,6 +47,7 @@ idf_component_register(
     "tasks/tasks.c"
     "tasks/weather.c"
     "tasks/wifi.c"
+    "tasks/wifi_ap.c"
   INCLUDE_DIRS
     "."
   REQUIRES
@@ -54,7 +56,9 @@ idf_component_register(
     bt
     driver
     esp_http_client
+    esp_http_server
     esp_partition
+    esp_wifi
     esp-tls
     json
     lvgl
