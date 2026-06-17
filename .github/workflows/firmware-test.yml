@@ -1,0 +1,30 @@
+name: Firmware Test
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "bitclock-fw/**"
+      - ".github/workflows/firmware-test.yml"
+  pull_request:
+    paths:
+      - "bitclock-fw/**"
+      - ".github/workflows/firmware-test.yml"
+
+jobs:
+  build:
+    name: Build (rev2-esp32s3)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build firmware
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.4
+          target: esp32s3
+          path: bitclock-fw/target-rev2-esp32s3
