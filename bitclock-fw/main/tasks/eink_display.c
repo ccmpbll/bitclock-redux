@@ -15,6 +15,7 @@
 #include "libs/sensor_utils.h"
 #include "lvgl/lv_helper.h"
 #include "lvgl/lvgl.h"
+#include "lvgl/views/aqi_grid.h"
 #include "lvgl/views/clock.h"
 #include "lvgl/views/logo.h"
 #include "lvgl/views/wifi_setup.h"
