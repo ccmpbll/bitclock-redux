@@ -46,10 +46,14 @@ idf_component_register(
     "tasks/sht4x.c"
     "tasks/tasks.c"
     "tasks/weather.c"
+    "tasks/web_admin.c"
     "tasks/wifi.c"
     "tasks/wifi_ap.c"
   INCLUDE_DIRS
     "."
+  EMBED_FILES
+    "web/admin.html"
+    "web/tz.json"
   REQUIRES
     app_update
     bootloader_support
@@ -63,6 +67,7 @@ idf_component_register(
     esp-tls
     json
     lvgl
+    mdns
     nvs_flash
 )
 idf_build_set_property(COMPILE_OPTIONS "-DLV_CONF_PATH=${LV_CONF_PATH}" APPEND)

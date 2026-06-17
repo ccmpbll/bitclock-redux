@@ -25,8 +25,8 @@ jobs:
 
       - name: Inject version into firmware
         run: |
-          sed -i 's/static const char \*gatt_svr_chr_firmware_version_val = ".*";/static const char *gatt_svr_chr_firmware_version_val = "${{ steps.version.outputs.VERSION }}";/' \
-            bitclock-fw/target-rev2-esp32s3/main/libs/gatt.c
+          sed -i 's/#define BITCLOCK_FW_VERSION ".*"/#define BITCLOCK_FW_VERSION "${{ steps.version.outputs.VERSION }}"/' \
+            bitclock-fw/target-rev2-esp32s3/main/libs/version.h
 
       - name: Build firmware
         uses: espressif/esp-idf-ci-action@v1

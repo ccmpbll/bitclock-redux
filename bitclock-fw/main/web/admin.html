@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bitclock Admin</title>
+  <style>
+    :root {
+      --bg: rgb(245, 242, 240);
+      --fg: rgb(41, 41, 41);
+      --muted: rgb(130, 120, 110);
+      --line: rgb(200, 195, 190);
+      --grad: linear-gradient(217deg, #4c6ef5, #22b8cf);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      max-width: 560px; margin-left: auto; margin-right: auto;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 4px; }
+    h2 { font-size: 1rem; margin: 0 0 12px; }
+    .sub { color: var(--muted); font-size: .85rem; margin: 0 0 20px; }
+    .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; }
+    .reading { text-align: center; }
+    .reading .val { font-size: 1.4rem; font-weight: 700; }
+    .reading .lbl { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    label { display: block; font-size: .8rem; font-weight: 600; margin: 12px 0 4px; }
+    select, input[type=text], input[type=password] {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+      font-size: .95rem; background: #fff; color: var(--fg);
+    }
+    button {
+      margin-top: 16px; padding: 10px 16px; border: none; border-radius: 6px;
+      background: var(--grad); color: #fff; font-size: .95rem; font-weight: 600; cursor: pointer;
+    }
+    button:active { opacity: .85; }
+    button.secondary { background: #fff; color: var(--fg); border: 1px solid var(--line); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .row > * { flex: 1; }
+    .status { font-size: .8rem; color: var(--muted); margin-top: 8px; min-height: 1em; }
+    .ver { color: var(--muted); font-size: .75rem; text-align: center; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Bitclock</h1>
+  <p class="sub">Device admin · <span id="wifi-state">—</span></p>
+
+  <div class="card">
+    <h2>Sensor readings</h2>
+    <div class="readings">
+      <div class="reading"><div class="val" id="r-temp">—</div><div class="lbl">Temp</div></div>
+      <div class="reading"><div class="val" id="r-hum">—</div><div class="lbl">Humidity</div></div>
+      <div class="reading"><div class="val" id="r-co2">—</div><div class="lbl">CO₂ ppm</div></div>
+      <div class="reading"><div class="val" id="r-voc">—</div><div class="lbl">VOC</div></div>
+      <div class="reading"><div class="val" id="r-nox">—</div><div class="lbl">NOₓ</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Display</h2>
+    <label for="app">App</label>
+    <select id="app">
+      <option value="1">Clock</option>
+      <option value="2">Weather</option>
+    </select>
+    <label for="clk">Clock format</label>
+    <select id="clk">
+      <option value="1">12 hour</option>
+      <option value="2">24 hour</option>
+    </select>
+    <label for="unit">Temperature unit</label>
+    <select id="unit">
+      <option value="1">Celsius</option>
+      <option value="2">Fahrenheit</option>
+    </select>
+    <label for="tz">Timezone</label>
+    <select id="tz"></select>
+    <label for="weather">Weather location</label>
+    <input type="text" id="weather" placeholder="e.g. /forecast/...">
+    <button onclick="saveSettings()">Save settings</button>
+    <div class="status" id="settings-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Wi-Fi</h2>
+    <label for="ssid">SSID</label>
+    <input type="text" id="ssid">
+    <label for="pw">Password</label>
+    <input type="password" id="pw">
+    <button onclick="saveWifi()">Update Wi-Fi</button>
+    <div class="status" id="wifi-status">Saving new credentials reboots the device.</div>
+  </div>
+
+  <div class="card">
+    <h2>Firmware update</h2>
+    <input type="file" id="fw" accept=".bin">
+    <button onclick="uploadFirmware()">Upload &amp; flash</button>
+    <div class="status" id="ota-status"></div>
+  </div>
+
+  <p class="ver">Firmware <span id="ver">—</span></p>
+
+  <script>
+    async function loadTimezones(selected) {
+      const sel = document.getElementById('tz');
+      try {
+        const tz = await (await fetch('/api/timezones')).json();
+        sel.innerHTML = '';
+        for (const [label, posix] of tz) {
+          const o = document.createElement('option');
+          o.value = posix; o.textContent = label;
+          if (posix === selected) o.selected = true;
+          sel.appendChild(o);
+        }
+      } catch (e) { /* leave empty on failure */ }
+    }
+
+    async function refreshStatus() {
+      try {
+        const s = await (await fetch('/api/status')).json();
+        const unit = s.temp_unit === 2 ? 'F' : 'C';
+        const t = s.temp_unit === 2 ? s.temp_f : s.temp_c;
+        document.getElementById('r-temp').textContent = `${Math.round(t)}°${unit}`;
+        document.getElementById('r-hum').textContent = `${Math.round(s.humidity)}%`;
+        document.getElementById('r-co2').textContent = s.co2;
+        document.getElementById('r-voc').textContent = s.voc;
+        document.getElementById('r-nox').textContent = s.nox;
+        document.getElementById('wifi-state').textContent = s.wifi_connected ? 'Connected' : 'Disconnected';
+        document.getElementById('ver').textContent = s.fw_version;
+        document.getElementById('app').value = s.app_selection;
+        document.getElementById('clk').value = s.clock_format;
+        document.getElementById('unit').value = s.temp_unit;
+        if (!document.getElementById('weather').value)
+          document.getElementById('weather').value = s.weather_path || '';
+        if (!window._tzLoaded) { window._tzLoaded = true; loadTimezones(s.timezone); }
+      } catch (e) { /* ignore transient errors */ }
+    }
+
+    async function post(url, body) {
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+      return r.ok;
+    }
+
+    async function saveSettings() {
+      const el = document.getElementById('settings-status');
+      el.textContent = 'Saving…';
+      const body = new URLSearchParams({
+        app_selection: document.getElementById('app').value,
+        clock_format: document.getElementById('clk').value,
+        temp_unit: document.getElementById('unit').value,
+        timezone: document.getElementById('tz').value,
+        weather_path: document.getElementById('weather').value,
+      });
+      el.textContent = await post('/api/settings', body) ? 'Saved.' : 'Failed.';
+    }
+
+    async function saveWifi() {
+      const el = document.getElementById('wifi-status');
+      el.textContent = 'Saving… device will reboot.';
+      const body = new URLSearchParams({
+        ssid: document.getElementById('ssid').value,
+        password: document.getElementById('pw').value,
+      });
+      await post('/api/wifi', body);
+    }
+
+    async function uploadFirmware() {
+      const el = document.getElementById('ota-status');
+      const f = document.getElementById('fw').files[0];
+      if (!f) { el.textContent = 'Select a .bin file first.'; return; }
+      el.textContent = `Uploading ${(f.size/1024).toFixed(0)} KB…`;
+      const r = await fetch('/api/ota', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: f });
+      el.textContent = r.ok ? 'Flashed. Rebooting…' : 'Update failed.';
+    }
+
+    refreshStatus();
+    setInterval(refreshStatus, 3000);
+  </script>
+</body>
+</html>
