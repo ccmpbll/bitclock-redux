@@ -1,70 +1,54 @@
-<img src="https://github.com/goat-hill/bitclock/assets/220799/5121ca8b-19c7-4db0-9a81-38fae36ac5df" width="250" alt="bitclock" />
+<img src="https://github.com/user-attachments/assets/a1be3895-0399-4e95-8b5f-d52c59792a22" width="500" alt="bitclock" />
 
-# bitclock
-Open source e-ink desk companion, clock, and air quality monitor.
+# bitclock-redux
 
-Available for purchase in USA @ https://bitclock.io
+A fork of [goat-hill/bitclock](https://github.com/goat-hill/bitclock) — an open-source e-ink desk clock and air quality monitor. This fork replaces the Bluetooth/BLE configurator with an on-device web admin and removes the weather feature to make it a clock-only device.
 
-<img src="https://github.com/user-attachments/assets/a1be3895-0399-4e95-8b5f-d52c59792a22" width="500" alt="Bitclock photo" />
+**Changes from upstream:**
+- **Web admin** at `http://bitclock.local` — configure Wi-Fi, timezone, and OTA firmware updates from any browser; no app or Bluetooth required
+- **AP provisioning** — on first boot (or after a failed Wi-Fi connection), the device broadcasts a `bitclock-setup` Wi-Fi network with a setup page at `192.168.4.1`
+- **Sensor readings on the clock face** — temperature, humidity, CO₂, VOC index, and NOx index displayed across the top of the display
+- **BLE removed** — no Bluetooth stack; smaller firmware image
+- **Weather removed** — clock-only device
 
-Visit https://bitclock.io/connect to configure your existing device
+## Flashing
 
-## Firmware
+### First install (USB)
 
-Source code for ESP32 using the ESP-IDF development framework.
+Download `bitclock-redux-full-<version>.bin` from the [latest release](https://github.com/ccmpbll/bitclock-redux/releases/latest) and flash it at offset `0x0` using the [Espressif web flasher](https://espressif.github.io/esptool-js/) or [NodeMCU PyFlasher](https://github.com/marcelstoer/nodemcu-pyflasher). The ESP32-S3 has native USB — no driver needed (shows as `/dev/cu.usbmodem*` on macOS).
 
-See [bitclock-fw/](bitclock-fw/)
+### OTA update
 
-## Website
+Download `bitclock-redux-app-<version>.bin` from the [latest release](https://github.com/ccmpbll/bitclock-redux/releases/latest) and upload it via the web admin at `http://bitclock.local` → Firmware Update.
 
-Next.js web app for [homepage](https://bitclock.io) and [device configurator](https://bitclock.io/connect).
+## Setup
 
-See [bitclock-web/](bitclock-web/)
+1. On first boot, connect to the `bitclock-setup` Wi-Fi network
+2. Open `http://192.168.4.1` in a browser and enter your Wi-Fi credentials
+3. The device reboots into your network and is accessible at `http://bitclock.local`
 
-<img src="https://github.com/goat-hill/bitclock/assets/220799/9b72ab4b-d259-4e13-9049-c8f1ba85664d" width="500" alt="Web configurator screenshot" />
+## Supported hardware
 
-## Enclosure
+**PCB rev3a only** — the first and only commercially sold revision of the bitclock hardware (ESP32-S3, e-ink display). Earlier prototype revisions (rev1 ESP32-C3, Seeed ESP32-S3) are not supported by this fork and their build targets have been removed.
 
-OnShape design, STEP files, and instructions for 3D printing.
+## Firmware development
 
-See [bitclock-enclosure/](bitclock-enclosure/)
+See [bitclock-fw/](bitclock-fw/) for build and flash instructions. Build from `bitclock-fw/target-rev2-esp32s3/` (`BOARD_TARGET 2`).
 
-<img src="https://github.com/goat-hill/bitclock/assets/220799/b83af06f-92e7-4f3a-9e44-477fad33d226" width="500" alt="Device CAD screenshot" />
+## Cloning
 
-## PCB
-
-KiCad schematic, board, and JLCPCB ordering files.
-
-See [bitclock-pcb/](bitclock-pcb/)
-
-<img src="https://github.com/user-attachments/assets/40ddb658-e42d-4617-83b4-a5637c75a250" width="500" alt="Bitclock PCB" />
-
-# Blog posts
-
-- [Advanced ESP32 development with ESP-IDF](https://bitclock.io/blog/esp-idf-vscode)
-
-# Contributing
-
-## Cloning the repo
-
-This repo uses git submodules. Make sure to use `git clone --recursive`.
+This repo uses git submodules.
 
 ```sh
-git clone --recursive git@github.com:goat-hill/bitclock.git
+git clone --recursive https://github.com/ccmpbll/bitclock-redux.git
 ```
 
-If the repo was previously checked out without `--recursive`, initialize the submodules.
+If already cloned without `--recursive`:
 
 ```sh
-git submodule init
-git submodule update
+git submodule init && git submodule update
 ```
 
-## Pre-commit linting
+## License
 
-A single pre-commit config is created for this monorepo. Set up the hooks to get linting on every commit.
-
-```fish
-brew install pre-commit
-pre-commit install
-```
+MIT — same as upstream. Original work by [goat-hill](https://github.com/goat-hill/bitclock).
