@@ -36,13 +36,14 @@ static void publish_discovery(esp_mqtt_client_handle_t c, const char *prefix) {
            "\"manufacturer\":\"bitclock-redux\"}",
            device_id);
 
+  bool fahrenheit = bitclock_nvs_get_temp_unit() == BITCLOCK_NVS_TEMP_UNIT_VAL_FAHRENHEIT;
   struct {
     const char *key;
     const char *name;
     const char *unit;
     const char *device_class;
   } sensors[] = {
-      {"temp",     "Temperature", "\xc2\xb0" "C", "temperature"},
+      {"temp",     "Temperature", fahrenheit ? "\xc2\xb0" "F" : "\xc2\xb0" "C", "temperature"},
       {"humidity", "Humidity",    "%",             "humidity"},
       {"co2",      "CO2",         "ppm",           "carbon_dioxide"},
       {"voc",      "VOC Index",   NULL,            NULL},
@@ -80,10 +81,13 @@ static void publish_state(esp_mqtt_client_handle_t c, const char *prefix) {
   if (!isfinite(temp_c)) temp_c = 0;
   if (!isfinite(humidity)) humidity = 0;
 
+  bool fahrenheit = bitclock_nvs_get_temp_unit() == BITCLOCK_NVS_TEMP_UNIT_VAL_FAHRENHEIT;
+  float temp = fahrenheit ? celsius_to_fahrenheit(temp_c) : temp_c;
+
   char topic[128], payload[32];
 
   snprintf(topic, sizeof(topic), "%s/temp", prefix);
-  snprintf(payload, sizeof(payload), "%.1f", temp_c);
+  snprintf(payload, sizeof(payload), "%.1f", temp);
   esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
 
   snprintf(topic, sizeof(topic), "%s/humidity", prefix);

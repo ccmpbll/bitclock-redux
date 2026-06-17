@@ -5,9 +5,10 @@
 A fork of [goat-hill/bitclock](https://github.com/goat-hill/bitclock) — an open-source e-ink desk clock and air quality monitor. This fork replaces the Bluetooth/BLE configurator with an on-device web admin and removes the weather feature to make it a clock-only device.
 
 **Changes from upstream:**
-- **Web admin** at `http://bitclock.local` — configure Wi-Fi, timezone, and OTA firmware updates from any browser; no app or Bluetooth required
+- **Web admin** at `http://bitclock.local` — configure Wi-Fi, timezone, NTP server, and OTA firmware updates from any browser; no app or Bluetooth required
 - **AP provisioning** — on first boot (or after a failed Wi-Fi connection), the device broadcasts a `bitclock-setup` Wi-Fi network with a setup page at `192.168.4.1`
 - **Sensor readings on the clock face** — temperature, humidity, CO₂, VOC index, and NOx index displayed across the top of the display
+- **MQTT + Home Assistant** — publishes all sensor readings to an MQTT broker; auto-discovery creates entities in Home Assistant automatically
 - **BLE removed** — no Bluetooth stack; smaller firmware image
 - **Weather removed** — clock-only device
 
@@ -38,6 +39,31 @@ Five values are displayed on the clock face and in the web admin:
 | **CO₂** | Carbon dioxide in ppm. Fresh air is ~400 ppm; above 1000 ppm feels stuffy. Sensor range: 400–2000 ppm (±50 ppm + 5%). |
 | **VOC** | Volatile organic compound index, relative to a rolling 24-hour baseline. **100** = baseline; **above 100** = air quality worsening (odors, fumes); **below 100** = cleaner than baseline. |
 | **NOₓ** | Nitrogen oxide index. **1** = clean air; **above 1** = combustion byproducts detected (gas stove, smoke). |
+
+## MQTT and Home Assistant
+
+Bitclock can publish sensor readings to an MQTT broker and auto-discover itself in Home Assistant.
+
+### Setup
+
+1. In the web admin (`http://bitclock.local`), open the **MQTT** section
+2. Enter your broker host, port (default 1883), and credentials if required
+3. Set a topic prefix (default `bitclock`) and publish interval (default 30s)
+4. Click **Save MQTT**
+
+### Home Assistant
+
+With the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) enabled in Home Assistant (discovery on by default), Bitclock will appear automatically as a device with 5 entities:
+
+| Entity | Topic | Unit |
+|---|---|---|
+| Temperature | `bitclock/temp` | °C or °F (follows web admin setting) |
+| Humidity | `bitclock/humidity` | % |
+| CO₂ | `bitclock/co2` | ppm |
+| VOC Index | `bitclock/voc` | — |
+| NOx Index | `bitclock/nox` | — |
+
+Discovery config topics are published with `retain=1` on connect, so Home Assistant picks them up even if it was offline when the device connected. Changing the temperature unit in the web admin updates the HA entity unit automatically on the next reconnect.
 
 ## Supported hardware
 
