@@ -21,8 +21,6 @@ static uint16_t ppm;
 static const uint8_t kStartPeriodicMeasurement[] = {0x21,
                                                     0xb1}; // No execution time
 static const uint8_t kReadMeasurement[] = {0xec, 0x05};    // 1ms exceution time
-static const uint8_t kStopPeriodicMeasurement[] = {
-    0x3f, 0x86}; // 500ms execution time
 
 static uint8_t kReadResponse[9];
 
