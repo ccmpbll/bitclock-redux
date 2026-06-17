@@ -27,6 +27,18 @@ Download `bitclock-redux-app-<version>.bin` from the [latest release](https://gi
 2. Open `http://192.168.4.1` in a browser and enter your Wi-Fi credentials
 3. The device reboots into your network and is accessible at `http://bitclock.local`
 
+## Sensor readings
+
+Five values are displayed on the clock face and in the web admin:
+
+| Reading | What it means |
+|---|---|
+| **Temp** | Ambient temperature (°C or °F) |
+| **Humidity** | Relative humidity (%) |
+| **CO₂** | Carbon dioxide in ppm. Fresh air is ~400 ppm; above 1000 ppm feels stuffy. Sensor range: 400–2000 ppm (±50 ppm + 5%). |
+| **VOC** | Volatile organic compound index, relative to a rolling 24-hour baseline. **100** = baseline; **above 100** = air quality worsening (odors, fumes); **below 100** = cleaner than baseline. |
+| **NOₓ** | Nitrogen oxide index. **1** = clean air; **above 1** = combustion byproducts detected (gas stove, smoke). |
+
 ## Supported hardware
 
 **PCB rev3a only** — the first and only commercially sold revision of the bitclock hardware (ESP32-S3, e-ink display). Earlier prototype revisions (rev1 ESP32-C3, Seeed ESP32-S3) are not supported by this fork and their build targets have been removed.
