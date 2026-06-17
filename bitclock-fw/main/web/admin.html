@@ -116,7 +116,8 @@
           sel.appendChild(o);
         }
         sel.value = selected;
-      } catch (e) { /* leave empty on failure */ }
+        return true;
+      } catch (e) { return false; }
     }
 
     // Live readings only — safe to run on every poll without disturbing edits.
@@ -137,7 +138,7 @@
     async function initSettings(s) {
       $('clk').value = s.clock_format;
       $('unit').value = s.temp_unit;
-      await loadTimezones(s.timezone);
+      return await loadTimezones(s.timezone);
     }
 
     async function post(url, body) {
@@ -179,9 +180,12 @@
     // Retry the initial load so a page refresh never leaves the UI blank if the
     // first request lands while the server is briefly busy.
     async function init() {
-      for (let attempt = 0; attempt < 8; attempt++) {
+      for (let attempt = 0; attempt < 12; attempt++) {
         const s = await fetchStatus();
-        if (s) { updateReadings(s); await initSettings(s); return; }
+        if (s) {
+          updateReadings(s);
+          if (await initSettings(s)) return;
+        }
         await sleep(500);
       }
     }
