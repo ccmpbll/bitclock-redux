@@ -75,6 +75,8 @@
     </select>
     <label for="tz">Timezone</label>
     <select id="tz"></select>
+    <label for="ntp">NTP server</label>
+    <input type="text" id="ntp" placeholder="pool.ntp.org">
     <button onclick="saveSettings()">Save settings</button>
     <div class="status" id="settings-status"></div>
   </div>
@@ -144,6 +146,7 @@
     async function initSettings(s) {
       $('clk').value = s.clock_format;
       $('unit').value = s.temp_unit;
+      $('ntp').value = s.ntp_server || 'pool.ntp.org';
       return await loadTimezones(s.tz_label || '');
     }
 
@@ -164,6 +167,7 @@
         temp_unit: $('unit').value,
         timezone: tz_posix,
         tz_label: tz_label,
+        ntp_server: $('ntp').value || 'pool.ntp.org',
       });
       setText('settings-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
     }

@@ -4,6 +4,7 @@
 #include "esp_netif.h"
 #include "esp_netif_sntp.h"
 #include "esp_wifi.h"
+#include "libs/nvs.h"
 #include "tasks/web_admin.h"
 #include "tasks/wifi_ap.h"
 
@@ -107,10 +108,18 @@ static void enter_ap_mode(bool is_fallback) {
   }
 }
 
+void bitclock_wifi_reinit_sntp(const char *server) {
+  esp_netif_sntp_deinit();
+  esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG(server);
+  esp_netif_sntp_init(&config);
+}
+
 void wifi_task_run(void *pvParameters) {
   wifi_driver_init();
 
-  esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+  const char *ntp = bitclock_nvs_get_ntp_server();
+  if (!ntp) ntp = "pool.ntp.org";
+  esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG(ntp);
   esp_netif_sntp_init(&config);
 
   // If no credentials are saved, go straight to AP mode for first-time setup.
