@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>bitclock-redux Admin</title>
+  <title>bitclock-redux</title>
   <style>
     :root {
       --bg: rgb(245, 242, 240);
@@ -38,6 +38,7 @@
     button:active { opacity: .85; }
     .status { font-size: .8rem; color: var(--muted); margin-top: 8px; min-height: 1em; }
     .ver { color: var(--muted); font-size: .75rem; text-align: center; margin-top: 8px; }
+    .hint { font-size: .75rem; color: var(--muted); margin: 12px 0 0; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -53,6 +54,11 @@
       <div class="reading"><div class="val" id="r-voc">—</div><div class="lbl">VOC</div></div>
       <div class="reading"><div class="val" id="r-nox">—</div><div class="lbl">NOₓ</div></div>
     </div>
+    <p class="hint">
+      <b>CO₂</b> — fresh air ~400 ppm; stuffy room &gt;1000 ppm; sensor range 400–2000 ppm.<br>
+      <b>VOC</b> — index relative to a 24 h baseline (100). Above 100 = worsening; below 100 = cleaner than baseline.<br>
+      <b>NOₓ</b> — index baseline is 1 (clean air). Above 1 indicates combustion byproducts (gas stove, smoke).
+    </p>
   </div>
 
   <div class="card">
