@@ -200,22 +200,23 @@ static esp_err_t post_handler(httpd_req_t *req) {
     raw_password[len] = '\0';
   }
 
-  WiFiCredentials_t creds = {0};
-  uri_decode(creds.ssid, raw_ssid, sizeof(creds.ssid));
-  uri_decode(creds.password, raw_password, sizeof(creds.password));
+  char ssid[32] = {0};
+  char password[64] = {0};
+  uri_decode(ssid, raw_ssid, sizeof(ssid));
+  uri_decode(password, raw_password, sizeof(password));
 
-  if (creds.ssid[0] == '\0') {
+  if (ssid[0] == '\0') {
     httpd_resp_set_status(req, "400 Bad Request");
     httpd_resp_send(req, "Missing SSID", HTTPD_RESP_USE_STRLEN);
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Received credentials for SSID: %s", creds.ssid);
+  ESP_LOGI(TAG, "Received credentials for SSID: %s", ssid);
 
   // Save credentials via the standard wifi path so they persist across reboot
   wifi_config_t wifi_cfg = {0};
-  strncpy((char *)wifi_cfg.sta.ssid, creds.ssid, sizeof(wifi_cfg.sta.ssid));
-  strncpy((char *)wifi_cfg.sta.password, creds.password,
+  strncpy((char *)wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid));
+  strncpy((char *)wifi_cfg.sta.password, password,
           sizeof(wifi_cfg.sta.password));
   esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg);
 

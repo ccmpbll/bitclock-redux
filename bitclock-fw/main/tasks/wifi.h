@@ -2,13 +2,6 @@
 
 #define WIFI_STACK_SIZE 1024 * 4
 
-typedef struct {
-  char ssid[32];
-  char password[64];
-} WiFiCredentials_t;
-extern QueueHandle_t wifiCredentialsQueueHandle;
-
-#define WIFI_CREDENTIALS_UPDATED_EVENT BIT0
 #define WIFI_READY_TO_CONNECT_EVENT BIT1
 #define WIFI_AP_MODE_ACTIVE_EVENT BIT2
 #define WIFI_AP_FALLBACK_EVENT BIT3

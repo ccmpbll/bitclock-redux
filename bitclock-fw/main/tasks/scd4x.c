@@ -5,8 +5,6 @@
 #include "libs/i2c.h"
 #include "libs/sensor_utils.h"
 #include "pins.h"
-#include "tasks/ble.h"
-
 static const char *TAG = "scd4x";
 
 StaticTask_t scd4xTaskBuffer;
@@ -111,7 +109,6 @@ esp_err_t scd4x_read() {
       ppm_available = true;
       ppm = 256 * kReadResponse[0] + kReadResponse[1];
       ESP_LOGD(TAG, "c02 ppm: %u", ppm);
-      ble_notify_co2_update();
     } else {
       ret = ESP_ERR_INVALID_CRC;
       ESP_LOGE(TAG, "Invalid CRC");

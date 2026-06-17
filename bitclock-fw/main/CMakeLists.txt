@@ -2,7 +2,6 @@ set(LV_CONF_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lvgl/lv_conf.h")
 idf_component_register(
   SRCS
     "libs/aqi_alert.c"
-    "libs/gatt.c"
     "libs/http_buffer.c"
     "libs/i2c.c"
     "libs/nvs.c"
@@ -23,10 +22,8 @@ idf_component_register(
     "lvgl/views/aqi_grid.c"
     "lvgl/views/clock.c"
     "lvgl/views/logo.c"
-    "lvgl/views/passkey.c"
     "lvgl/views/wifi_setup.c"
     "main.c"
-    "tasks/ble.c"
     "tasks/eink_display.c"
     "tasks/led.c"
     "tasks/scd4x.c"
@@ -45,7 +42,6 @@ idf_component_register(
   REQUIRES
     app_update
     bootloader_support
-    bt
     driver
     esp_http_client
     esp_http_server

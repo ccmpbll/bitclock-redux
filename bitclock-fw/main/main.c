@@ -14,7 +14,6 @@
 #include "nvs_flash.h"
 #include "pins.h"
 
-#include "tasks/ble.h"
 #include "tasks/eink_display.h"
 #include "tasks/led.h"
 #include "tasks/scd4x.h"
@@ -28,7 +27,6 @@ void app_main(void) {
   ESP_ERROR_CHECK(bitclock_ota_on_boot());
   i2c_bus_init();
 
-  // Used by wifi, ble tasks
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -116,16 +114,6 @@ void app_main(void) {
                                WIFI_TASK_PRIORITY, // uxPriority
                                wifiTaskStack,      // puxStackBuffer
                                &wifiTaskBuffer     // pxTaskBuffer
-  );
-#endif
-
-#ifdef BLE_TASK_ENABLED
-  bleTask = xTaskCreateStatic(ble_task_run, "ble",
-                              BLE_STACK_SIZE,    // ulStackDepth
-                              (void *)1,         // pvParamters
-                              BLE_TASK_PRIORITY, // uxPriority
-                              bleTaskStack,      // puxStackBuffer
-                              &bleTaskBuffer     // pxTaskBuffer
   );
 #endif
 

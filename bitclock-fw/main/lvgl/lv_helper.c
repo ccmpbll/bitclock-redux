@@ -6,7 +6,6 @@
 #include "views/aqi_grid.h"
 #include "views/clock.h"
 #include "views/logo.h"
-#include "views/passkey.h"
 #include "views/wifi_setup.h"
 
 view_mode_t active_view_mode = VIEW_MODE_NONE;
@@ -22,9 +21,6 @@ void lv_helper_set_view_mode(view_mode_t view_mode) {
 
     switch (view_mode) {
     case VIEW_MODE_NONE:
-      break;
-    case VIEW_MODE_PASSKEY:
-      lv_helper_passkey_create();
       break;
     case VIEW_MODE_LOGO:
       lv_helper_logo_create();
@@ -53,9 +49,6 @@ void lv_helper_set_view_mode(view_mode_t view_mode) {
 void lv_helper_update() {
   switch (active_view_mode) {
   case VIEW_MODE_NONE:
-    break;
-  case VIEW_MODE_PASSKEY:
-    lv_helper_passkey_update(&lv_helper_view_mode_passkey_data);
     break;
   case VIEW_MODE_LOGO:
     lv_helper_logo_update();

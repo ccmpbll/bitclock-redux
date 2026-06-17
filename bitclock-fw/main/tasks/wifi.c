@@ -5,8 +5,6 @@
 #include "esp_netif.h"
 #include "esp_netif_sntp.h"
 #include "esp_wifi.h"
-#include "libs/http_buffer.h"
-#include "tasks/ble.h"
 #include "tasks/web_admin.h"
 #include "tasks/wifi_ap.h"
 
@@ -23,9 +21,6 @@ StackType_t wifiTaskStack[WIFI_STACK_SIZE];
 SemaphoreHandle_t wifi_req_semaphore;
 StaticSemaphore_t wifi_req_semaphore_mutex_buffer;
 
-QueueHandle_t wifiCredentialsQueueHandle;
-static StaticQueue_t wifiCredentialsQueue;
-uint8_t wifiCredentialsQueueStorageArea[1 * sizeof(WiFiCredentials_t)];
 static bool wifi_started = false;
 static bool wifi_has_ip_val = false;
 static bool wifi_ever_had_ip = false;
@@ -55,13 +50,11 @@ static void event_handler(void *arg, esp_event_base_t event_base,
       wifi_ever_had_ip = true;
       ESP_LOGI(TAG, "Connected with IP Address:" IPSTR,
                IP2STR(&event->ip_info.ip));
-      ble_notify_wifi_status_update();
       // Idempotent — only starts the admin server + mDNS on first IP.
       web_admin_start();
       break;
     case IP_EVENT_STA_LOST_IP:
       wifi_has_ip_val = false;
-      ble_notify_wifi_status_update();
       break;
     default:
       break;
@@ -116,10 +109,6 @@ static void enter_ap_mode(bool is_fallback) {
 }
 
 void wifi_task_run(void *pvParameters) {
-  wifiCredentialsQueueHandle = xQueueCreateStatic(
-      1, sizeof(WiFiCredentials_t), wifiCredentialsQueueStorageArea,
-      &wifiCredentialsQueue);
-
   wifi_driver_init();
 
   esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
@@ -136,10 +125,7 @@ void wifi_task_run(void *pvParameters) {
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
   wifi_started = true;
-  ble_notify_wifi_status_update();
 
-  WiFiCredentials_t wifiCreds;
-  wifi_config_t wifi_cfg;
   EventBits_t wifi_event_bits = 0;
   int boot_retry_count = 0;
 
@@ -165,39 +151,10 @@ void wifi_task_run(void *pvParameters) {
       esp_wifi_connect();
     }
 
-    // New credentials from BLE GATT
-    if (xQueueReceive(wifiCredentialsQueueHandle, &wifiCreds, 0) == pdPASS) {
-      if (wifi_started) {
-        esp_wifi_stop();
-        wifi_started = false;
-        wifi_has_ip_val = false;
-        ble_notify_wifi_status_update();
-      }
-
-      wifi_config_t new_cfg = {0};
-      strncpy((char *)new_cfg.sta.ssid, wifiCreds.ssid,
-              sizeof(new_cfg.sta.ssid));
-      strncpy((char *)new_cfg.sta.password, wifiCreds.password,
-              sizeof(new_cfg.sta.password));
-      ESP_LOGI(TAG, "New wifi creds for SSID: %s", new_cfg.sta.ssid);
-      ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &new_cfg));
-      boot_retry_count = 0;
-    }
-
-    if (!wifi_started &&
-        esp_wifi_get_config(WIFI_IF_STA, &wifi_cfg) == ESP_OK) {
-      wifi_started = true;
-      ESP_LOGI(TAG, "Starting Wi-Fi STA");
-      ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-      ESP_ERROR_CHECK(esp_wifi_start());
-      ble_notify_wifi_status_update();
-    }
-
     xSemaphoreGive(wifi_req_semaphore);
 
     wifi_event_bits = xEventGroupWaitBits(wifi_event_group_handle,
-                                          WIFI_CREDENTIALS_UPDATED_EVENT |
-                                              WIFI_READY_TO_CONNECT_EVENT,
+                                          WIFI_READY_TO_CONNECT_EVENT,
                                           true,  // clear on exit
                                           false, // wait for all
                                           portMAX_DELAY);

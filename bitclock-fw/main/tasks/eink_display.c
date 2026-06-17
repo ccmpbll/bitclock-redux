@@ -20,12 +20,10 @@
 #include "lvgl/views/aqi_grid.h"
 #include "lvgl/views/clock.h"
 #include "lvgl/views/logo.h"
-#include "lvgl/views/passkey.h"
 #include "lvgl/views/wifi_setup.h"
 #include "scd4x.h"
 #include "sgp4x.h"
 #include "sht4x.h"
-#include "tasks/ble.h"
 #include "tasks/wifi.h"
 #include <math.h>
 #include <string.h>
@@ -546,19 +544,14 @@ void eink_task_run(void *pvParameters) {
       }
     }
 
-    lv_helper_view_mode_passkey_data.passkey = ble_active_passkey();
-
     EventBits_t wifi_bits = xEventGroupGetBits(wifi_event_group_handle);
     if (wifi_bits & WIFI_AP_MODE_ACTIVE_EVENT) {
       // wifi.c sets WIFI_AP_MODE_ACTIVE_EVENT; the fallback bit indicates
       // whether this was a credential failure rather than a first boot.
-      bool is_fallback =
-          (wifi_bits & WIFI_AP_FALLBACK_EVENT) != 0;
+      bool is_fallback = (wifi_bits & WIFI_AP_FALLBACK_EVENT) != 0;
       view_mode = is_fallback ? VIEW_MODE_WIFI_SETUP_FALLBACK
                               : VIEW_MODE_WIFI_SETUP;
       lv_helper_set_view_mode(view_mode);
-    } else if (lv_helper_view_mode_passkey_data.passkey != PASSKEY_NOT_ACTIVE) {
-      lv_helper_set_view_mode(VIEW_MODE_PASSKEY);
     } else {
       lv_helper_set_view_mode(VIEW_MODE_CLOCK);
     }

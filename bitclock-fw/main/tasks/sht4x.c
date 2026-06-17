@@ -6,7 +6,6 @@
 #include "libs/i2c.h"
 #include "libs/sensor_utils.h"
 #include "pins.h"
-#include "tasks/ble.h"
 #include <inttypes.h>
 #include <math.h>
 
@@ -205,8 +204,6 @@ esp_err_t sht4x_measure_high_precision() {
 
   if (ret == ESP_OK) {
     ESP_LOGD(TAG, "T: %f\t RH: %f", degC, relativeHumidity);
-    ble_notify_temperature_update();
-    ble_notify_humidity_update();
   }
 
   return ret;

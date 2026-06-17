@@ -14,7 +14,6 @@
 #define SCD4X_TASK_ENABLED 1
 #define SGP4X_TASK_ENABLED 1
 #define WIFI_TASK_ENABLED 1
-#define BLE_TASK_ENABLED 1
 
 //
 // Task objects
@@ -54,7 +53,3 @@ extern TaskHandle_t sgp4xTask;
 extern TaskHandle_t wifiTask;
 #endif
 
-#ifdef BLE_TASK_ENABLED
-#define BLE_TASK_PRIORITY 15
-extern TaskHandle_t bleTask;
-#endif

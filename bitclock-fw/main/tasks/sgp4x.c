@@ -8,7 +8,6 @@
 #include "libs/sensor_utils.h"
 #include "pins.h"
 #include "sht4x.h"
-#include "tasks/ble.h"
 #include <inttypes.h>
 
 static const char *TAG = "sgp4x";
@@ -208,13 +207,11 @@ void sgp4x_task_run(void *pvParameters) {
         GasIndexAlgorithm_process(&voc_params, sraw_voc, &voc_index_value);
         ESP_LOGD(TAG, "VOC Raw: %" PRIu16 "\tVOC Index: %" PRId32, sraw_voc,
                  voc_index_value);
-        ble_notify_voc_index_update();
       }
       if (nox_available) {
         GasIndexAlgorithm_process(&nox_params, sraw_nox, &nox_index_value);
         ESP_LOGD(TAG, "NOx Raw: %" PRIu16 "\tNOx Index: %" PRId32, sraw_nox,
                  nox_index_value);
-        ble_notify_nox_index_update();
       }
     }
   }
