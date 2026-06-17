@@ -1,6 +1,8 @@
 #include "nvs.h"
 
 #include <nvs.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char *NVS_NAMESPACE =
@@ -31,12 +33,26 @@ esp_err_t bitclock_nvs_init() {
     return err;
   }
   if (required_size > 0) {
-    timezone_str = malloc(required_size);
-    err = nvs_get_blob(handle, NVS_ID_TIMEZONE, (void *)timezone_str,
-                       &required_size);
+    char *tz_buf = malloc(required_size);
+    err = nvs_get_blob(handle, NVS_ID_TIMEZONE, tz_buf, &required_size);
     if (err != ESP_OK) {
-      free((void *)timezone_str);
+      free(tz_buf);
       return err;
+    }
+    // Validate: must be null-terminated printable ASCII. Corrupted NVS blobs
+    // (e.g. from a dangling-pointer write or pre-web-admin firmware) contain
+    // binary bytes that break JSON when embedded in /api/status.
+    bool valid = (required_size > 0 && tz_buf[required_size - 1] == '\0');
+    for (size_t i = 0; valid && i < required_size - 1; i++) {
+      unsigned char c = (unsigned char)tz_buf[i];
+      if (c < 0x20 || c > 0x7E)
+        valid = false;
+    }
+    if (valid) {
+      timezone_str = tz_buf;
+    } else {
+      free(tz_buf);
+      // Leave timezone_str NULL; user can re-set via web admin.
     }
   }
 
@@ -92,13 +108,18 @@ esp_err_t bitclock_nvs_set_tz(const char *tz, size_t size) {
   }
 
   err = nvs_set_blob(handle, NVS_ID_TIMEZONE, tz, size);
+  nvs_close(handle);
   if (err != ESP_OK) {
     return err;
   }
-  // FIXME: Free the old string? Malloc for the new one?
-  timezone_str = tz;
 
-  nvs_close(handle);
+  // Copy to heap so we never hold a pointer into the caller's stack frame.
+  char *copy = malloc(size);
+  if (copy) {
+    memcpy(copy, tz, size);
+    free((void *)timezone_str);
+    timezone_str = copy;
+  }
 
   return ESP_OK;
 }
