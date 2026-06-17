@@ -15,7 +15,6 @@
 #define SGP4X_TASK_ENABLED 1
 #define WIFI_TASK_ENABLED 1
 #define BLE_TASK_ENABLED 1
-#define WEATHER_TASK_ENABLED 1
 
 //
 // Task objects
@@ -58,9 +57,4 @@ extern TaskHandle_t wifiTask;
 #ifdef BLE_TASK_ENABLED
 #define BLE_TASK_PRIORITY 15
 extern TaskHandle_t bleTask;
-#endif
-
-#ifdef WEATHER_TASK_ENABLED
-#define WEATHER_TASK_PRIORITY 10
-extern TaskHandle_t weatherTask;
 #endif

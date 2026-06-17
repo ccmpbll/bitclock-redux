@@ -7,7 +7,6 @@
 #include "views/clock.h"
 #include "views/logo.h"
 #include "views/passkey.h"
-#include "views/weather.h"
 #include "views/wifi_setup.h"
 
 view_mode_t active_view_mode = VIEW_MODE_NONE;
@@ -35,9 +34,6 @@ void lv_helper_set_view_mode(view_mode_t view_mode) {
       break;
     case VIEW_MODE_AQI_GRID:
       lv_helper_aqi_grid_create();
-      break;
-    case VIEW_MODE_WEATHER:
-      lv_helper_weather_create();
       break;
     case VIEW_MODE_WIFI_SETUP:
       lv_helper_wifi_setup_create(false);
@@ -69,9 +65,6 @@ void lv_helper_update() {
     break;
   case VIEW_MODE_AQI_GRID:
     lv_helper_aqi_grid_update(&lv_helper_view_mode_aqi_data);
-    break;
-  case VIEW_MODE_WEATHER:
-    lv_helper_weather_update(&lv_helper_view_mode_weather_data);
     break;
   case VIEW_MODE_WIFI_SETUP:
   case VIEW_MODE_WIFI_SETUP_FALLBACK:

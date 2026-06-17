@@ -36,9 +36,6 @@
       background: var(--grad); color: #fff; font-size: .95rem; font-weight: 600; cursor: pointer;
     }
     button:active { opacity: .85; }
-    button.secondary { background: #fff; color: var(--fg); border: 1px solid var(--line); }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .row > * { flex: 1; }
     .status { font-size: .8rem; color: var(--muted); margin-top: 8px; min-height: 1em; }
     .ver { color: var(--muted); font-size: .75rem; text-align: center; margin-top: 8px; }
   </style>
@@ -60,11 +57,6 @@
 
   <div class="card">
     <h2>Display</h2>
-    <label for="app">App</label>
-    <select id="app">
-      <option value="1">Clock</option>
-      <option value="2">Weather</option>
-    </select>
     <label for="clk">Clock format</label>
     <select id="clk">
       <option value="1">12 hour</option>
@@ -79,19 +71,6 @@
     <select id="tz"></select>
     <button onclick="saveSettings()">Save settings</button>
     <div class="status" id="settings-status"></div>
-  </div>
-
-  <div class="card">
-    <h2>Weather location</h2>
-    <p class="sub" style="margin-bottom:4px">US only — uses the National Weather Service. Enter coordinates and look up.</p>
-    <div class="row">
-      <div><label for="lat">Latitude</label><input type="text" id="lat" placeholder="37.77"></div>
-      <div><label for="lon">Longitude</label><input type="text" id="lon" placeholder="-122.42"></div>
-    </div>
-    <button class="secondary" onclick="lookupWeather()">Look up</button>
-    <button onclick="saveWeather()">Save location</button>
-    <input type="hidden" id="weather">
-    <div class="status" id="weather-status"></div>
   </div>
 
   <div class="card">
@@ -116,10 +95,11 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const setText = (id, v) => { $(id).textContent = v; };
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
     async function fetchStatus() {
       try {
-        const r = await fetch('/api/status');
+        const r = await fetch('/api/status', { cache: 'no-store' });
         if (!r.ok) return null;
         return await r.json();
       } catch (e) { return null; }
@@ -128,7 +108,7 @@
     async function loadTimezones(selected) {
       const sel = $('tz');
       try {
-        const tz = await (await fetch('/api/timezones')).json();
+        const tz = await (await fetch('/api/timezones', { cache: 'no-store' })).json();
         sel.innerHTML = '';
         for (const [label, posix] of tz) {
           const o = document.createElement('option');
@@ -152,14 +132,11 @@
       setText('ver', s.fw_version);
     }
 
-    // Settings → form controls. Runs once on load so polling never clobbers
-    // a value the user is in the middle of changing.
+    // Settings → controls. Runs once on load so polling never clobbers a value
+    // the user is in the middle of changing.
     async function initSettings(s) {
-      $('app').value = s.app_selection;
       $('clk').value = s.clock_format;
       $('unit').value = s.temp_unit;
-      $('weather').value = s.weather_path || '';
-      if (s.weather_path) setText('weather-status', `Current: ${s.weather_path}`);
       await loadTimezones(s.timezone);
     }
 
@@ -173,35 +150,11 @@
     async function saveSettings() {
       setText('settings-status', 'Saving…');
       const body = new URLSearchParams({
-        app_selection: $('app').value,
         clock_format: $('clk').value,
         temp_unit: $('unit').value,
         timezone: $('tz').value,
       });
       setText('settings-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
-    }
-
-    async function lookupWeather() {
-      const lat = $('lat').value.trim(), lon = $('lon').value.trim();
-      if (!lat || !lon) { setText('weather-status', 'Enter latitude and longitude.'); return; }
-      setText('weather-status', 'Looking up…');
-      try {
-        const d = await (await fetch(`https://api.weather.gov/points/${lat},${lon}`)).json();
-        const path = new URL(d.properties.forecast).pathname;
-        $('weather').value = path;
-        const loc = d.properties.relativeLocation && d.properties.relativeLocation.properties;
-        setText('weather-status', loc ? `Found ${loc.city}, ${loc.state} — click Save location` : `Found ${path} — click Save`);
-      } catch (e) {
-        setText('weather-status', 'No NWS location for those coordinates (US only).');
-      }
-    }
-
-    async function saveWeather() {
-      const path = $('weather').value;
-      if (!path) { setText('weather-status', 'Look up a location first.'); return; }
-      setText('weather-status', 'Saving…');
-      const ok = await post('/api/settings', new URLSearchParams({ weather_path: path }));
-      setText('weather-status', ok ? 'Saved.' : 'Failed.');
     }
 
     async function saveWifi() {
@@ -216,13 +169,25 @@
       setText('ota-status', `Uploading ${(f.size/1024).toFixed(0)} KB…`);
       try {
         const r = await fetch('/api/ota', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: f });
-        setText('ota-status', r.ok ? 'Flashed. Rebooting…' : 'Update failed.');
-      } catch (e) { setText('ota-status', 'Update failed.'); }
+        if (!r.ok) { setText('ota-status', 'Update failed.'); return; }
+      } catch (e) { setText('ota-status', 'Update failed.'); return; }
+      // Device flashes and reboots; wait for it to come back, then reload.
+      for (let s = 20; s > 0; s--) { setText('ota-status', `Flashed. Rebooting… reloading in ${s}s`); await sleep(1000); }
+      location.reload();
+    }
+
+    // Retry the initial load so a page refresh never leaves the UI blank if the
+    // first request lands while the server is briefly busy.
+    async function init() {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const s = await fetchStatus();
+        if (s) { updateReadings(s); await initSettings(s); return; }
+        await sleep(500);
+      }
     }
 
     (async () => {
-      const s = await fetchStatus();
-      if (s) { updateReadings(s); await initSettings(s); }
+      await init();
       setInterval(async () => { const s = await fetchStatus(); if (s) updateReadings(s); }, 5000);
     })();
   </script>

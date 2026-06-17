@@ -28,7 +28,3 @@ TaskHandle_t wifiTask;
 #ifdef BLE_TASK_ENABLED
 TaskHandle_t bleTask;
 #endif
-
-#ifdef WEATHER_TASK_ENABLED
-TaskHandle_t weatherTask;
-#endif

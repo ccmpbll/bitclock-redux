@@ -22,7 +22,6 @@
 #include "tasks/sharp_display.h"
 #include "tasks/sht4x.h"
 #include "tasks/tasks.h"
-#include "tasks/weather.h"
 #include "tasks/wifi.h"
 
 void app_main(void) {
@@ -127,16 +126,6 @@ void app_main(void) {
                               BLE_TASK_PRIORITY, // uxPriority
                               bleTaskStack,      // puxStackBuffer
                               &bleTaskBuffer     // pxTaskBuffer
-  );
-#endif
-
-#ifdef WEATHER_TASK_ENABLED
-  weatherTask = xTaskCreateStatic(weather_task_run, "weather",
-                                  WEATHER_STACK_SIZE,    // ulStackDepth
-                                  (void *)1,             // pvParamters
-                                  WEATHER_TASK_PRIORITY, // uxPriority
-                                  weatherTaskStack,      // puxStackBuffer
-                                  &weatherTaskBuffer     // pxTaskBuffer
   );
 #endif
 

@@ -11,11 +11,11 @@
 #include "tasks/scd4x.h"
 #include "tasks/sgp4x.h"
 #include "tasks/sht4x.h"
-#include "tasks/weather.h"
 #include "tasks/wifi.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static const char *TAG = "web_admin";
 
@@ -94,21 +94,18 @@ static esp_err_t status_get(httpd_req_t *req) {
   if (!isfinite(humidity))
     humidity = 0;
   const char *tz = bitclock_nvs_get_tz();
-  const char *weather = bitclock_nvs_get_weather_path();
 
   char json[512];
   snprintf(json, sizeof(json),
            "{\"temp_c\":%.1f,\"temp_f\":%.1f,\"humidity\":%.1f,\"co2\":%u,"
            "\"voc\":%ld,\"nox\":%ld,\"wifi_connected\":%s,\"temp_unit\":%u,"
-           "\"clock_format\":%u,\"app_selection\":%u,\"timezone\":\"%s\","
-           "\"weather_path\":\"%s\",\"fw_version\":\"%s\"}",
+           "\"clock_format\":%u,\"timezone\":\"%s\",\"fw_version\":\"%s\"}",
            temp_c, celsius_to_fahrenheit(temp_c), humidity,
            scd4x_current_co2_ppm(),
            (long)sgp4x_current_voc_index(), (long)sgp41_current_nox_index(),
            bitclock_wifi_has_ip() ? "true" : "false",
            bitclock_nvs_get_temp_unit(), bitclock_nvs_get_clock_format(),
-           bitclock_nvs_get_app_selection(), tz ? tz : "",
-           weather ? weather : "", BITCLOCK_FW_VERSION);
+           tz ? tz : "", BITCLOCK_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
@@ -145,19 +142,10 @@ static esp_err_t settings_post(httpd_req_t *req) {
   if (form_field(body, "clock_format", val, sizeof(val)) && val[0])
     bitclock_nvs_set_clock_format((bitclock_nvs_clock_format_val_t)atoi(val));
 
-  if (form_field(body, "app_selection", val, sizeof(val)) && val[0])
-    bitclock_nvs_set_app_selection((bitclock_nvs_app_selection_val_t)atoi(val));
-
   if (form_field(body, "timezone", val, sizeof(val)) && val[0]) {
     bitclock_nvs_set_tz(val, strlen(val) + 1);
     setenv("TZ", val, 1);
     tzset();
-  }
-
-  if (form_field(body, "weather_path", val, sizeof(val))) {
-    bitclock_nvs_set_weather_path(val, strlen(val) + 1);
-    xEventGroupSetBits(weather_event_group_handle,
-                       WEATHER_EVENT_LOCATION_CHANGED);
   }
 
   httpd_resp_set_type(req, "text/plain");
@@ -264,6 +252,9 @@ void web_admin_start() {
   config.lru_purge_enable = true;
   config.uri_match_fn = httpd_uri_match_wildcard;
   config.stack_size = 8192;
+  // Browsers open several parallel connections (page, polling, favicon); give
+  // the server headroom so a reload does not get starved of sockets.
+  config.max_open_sockets = 10;
 
   if (httpd_start(&server, &config) != ESP_OK) {
     ESP_LOGE(TAG, "Failed to start admin HTTP server");

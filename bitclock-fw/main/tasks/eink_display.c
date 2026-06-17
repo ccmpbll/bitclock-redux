@@ -21,13 +21,11 @@
 #include "lvgl/views/clock.h"
 #include "lvgl/views/logo.h"
 #include "lvgl/views/passkey.h"
-#include "lvgl/views/weather.h"
 #include "lvgl/views/wifi_setup.h"
 #include "scd4x.h"
 #include "sgp4x.h"
 #include "sht4x.h"
 #include "tasks/ble.h"
-#include "tasks/weather.h"
 #include "tasks/wifi.h"
 #include <math.h>
 #include <string.h>
@@ -509,8 +507,6 @@ void eink_task_run(void *pvParameters) {
 
     time(&lv_helper_view_mode_clock_data.curtime);
 
-    bool celsius_mode =
-        bitclock_nvs_get_temp_unit() == BITCLOCK_NVS_TEMP_UNIT_VAL_CELSIUS;
     lv_helper_view_mode_clock_data.hour24 =
         bitclock_nvs_get_clock_format() == BITCLOCK_NVS_CLOCK_FORMAT_VAL_24HR;
 
@@ -552,16 +548,6 @@ void eink_task_run(void *pvParameters) {
 
     lv_helper_view_mode_passkey_data.passkey = ble_active_passkey();
 
-    lv_helper_view_mode_weather_data.icon = latest_weather.icon;
-    lv_helper_view_mode_weather_data.temp_high =
-        celsius_mode
-            ? (int16_t)roundf(fahrenheit_to_celsius(latest_weather.temp_max))
-            : latest_weather.temp_max;
-    lv_helper_view_mode_weather_data.temp_low =
-        celsius_mode
-            ? (int16_t)roundf(fahrenheit_to_celsius(latest_weather.temp_min))
-            : latest_weather.temp_min;
-
     EventBits_t wifi_bits = xEventGroupGetBits(wifi_event_group_handle);
     if (wifi_bits & WIFI_AP_MODE_ACTIVE_EVENT) {
       // wifi.c sets WIFI_AP_MODE_ACTIVE_EVENT; the fallback bit indicates
@@ -574,14 +560,7 @@ void eink_task_run(void *pvParameters) {
     } else if (lv_helper_view_mode_passkey_data.passkey != PASSKEY_NOT_ACTIVE) {
       lv_helper_set_view_mode(VIEW_MODE_PASSKEY);
     } else {
-      bitclock_nvs_app_selection_val_t app_selection =
-          bitclock_nvs_get_app_selection();
-      if (app_selection == BITCLOCK_NVS_APP_SELECTION_VAL_CLOCK) {
-        view_mode = VIEW_MODE_CLOCK;
-      } else if (app_selection == BITCLOCK_NVS_APP_SELECTION_VAL_WEATHER) {
-        view_mode = VIEW_MODE_WEATHER;
-      }
-      lv_helper_set_view_mode(view_mode);
+      lv_helper_set_view_mode(VIEW_MODE_CLOCK);
     }
 
     lv_helper_update();

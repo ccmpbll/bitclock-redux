@@ -17,7 +17,6 @@
 #include "tasks/scd4x.h"
 #include "tasks/sgp4x.h"
 #include "tasks/sht4x.h"
-#include "tasks/weather.h"
 #include "tasks/wifi.h"
 
 static const char *TAG = "gatt";
@@ -91,12 +90,6 @@ static const ble_uuid16_t gatt_svr_chr_temperature_unit_uuid =
 uint16_t gatt_svr_chr_temperature_unit_val_handle;
 bitclock_nvs_temp_unit_val_t gatt_svr_chr_temperature_unit_val;
 
-static const ble_uuid128_t gatt_svr_chr_app_selection_uuid =
-    BLE_UUID128_INIT(0xea, 0x49, 0xe2, 0x46, 0x73, 0xf7, 0xa2, 0x9a, 0xeb, 0x43,
-                     0xee, 0x0a, 0xe2, 0xc5, 0x04, 0x35);
-uint16_t gatt_svr_chr_app_selection_val_handle;
-bitclock_nvs_app_selection_val_t gatt_svr_chr_app_selection_val;
-
 static const ble_uuid128_t gatt_svr_chr_wifi_status_uuid =
     BLE_UUID128_INIT(0x5d, 0xb6, 0x11, 0x87, 0xe8, 0xc9, 0xa6, 0x8d, 0x26, 0x4d,
                      0xb2, 0xd9, 0xc3, 0xb3, 0xf4, 0x32);
@@ -107,12 +100,6 @@ static const ble_uuid128_t gatt_svr_chr_clock_format_uuid =
                      0x1d, 0x87, 0x38, 0xa5, 0x23, 0x83);
 uint16_t gatt_svr_chr_clock_format_val_handle;
 bitclock_nvs_clock_format_val_t gatt_svr_chr_clock_format_val;
-
-static const ble_uuid128_t gatt_svr_chr_weather_path_uuid =
-    BLE_UUID128_INIT(0x81, 0x1f, 0x8c, 0xd4, 0x26, 0x00, 0x80, 0xb8, 0xe2, 0x47,
-                     0x66, 0x95, 0x1d, 0xee, 0xef, 0x32);
-uint16_t gatt_svr_chr_weather_path_val_handle;
-char gatt_svr_chr_weather_path_val[64];
 
 static int gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
                            struct ble_gatt_access_ctxt *ctxt, void *arg);
@@ -142,15 +129,6 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
                     .val_handle = &gatt_svr_chr_temperature_unit_val_handle,
                 },
                 {
-                    .uuid = &gatt_svr_chr_app_selection_uuid.u,
-                    .access_cb = gatt_svc_access,
-                    .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC |
-                             BLE_GATT_CHR_F_WRITE_AUTHEN | BLE_GATT_CHR_F_READ |
-                             BLE_GATT_CHR_F_READ_ENC |
-                             BLE_GATT_CHR_F_READ_AUTHEN,
-                    .val_handle = &gatt_svr_chr_app_selection_val_handle,
-                },
-                {
                     .uuid = &gatt_svr_chr_clock_format_uuid.u,
                     .access_cb = gatt_svc_access,
                     .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC |
@@ -158,15 +136,6 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
                              BLE_GATT_CHR_F_READ_ENC |
                              BLE_GATT_CHR_F_READ_AUTHEN,
                     .val_handle = &gatt_svr_chr_clock_format_val_handle,
-                },
-                {
-                    .uuid = &gatt_svr_chr_weather_path_uuid.u,
-                    .access_cb = gatt_svc_access,
-                    .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC |
-                             BLE_GATT_CHR_F_WRITE_AUTHEN | BLE_GATT_CHR_F_READ |
-                             BLE_GATT_CHR_F_READ_ENC |
-                             BLE_GATT_CHR_F_READ_AUTHEN,
-                    .val_handle = &gatt_svr_chr_weather_path_val_handle,
                 },
                 {
                     .uuid = &gatt_svr_chr_wifi_status_uuid.u,
@@ -381,22 +350,10 @@ static int gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
       rc = os_mbuf_append(ctxt->om, &gatt_svr_chr_temperature_unit_val,
                           sizeof(gatt_svr_chr_temperature_unit_val));
       return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-    } else if (attr_handle == gatt_svr_chr_app_selection_val_handle) {
-      gatt_svr_chr_app_selection_val = bitclock_nvs_get_app_selection();
-      rc = os_mbuf_append(ctxt->om, &gatt_svr_chr_app_selection_val,
-                          sizeof(gatt_svr_chr_app_selection_val));
-      return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
     } else if (attr_handle == gatt_svr_chr_clock_format_val_handle) {
       gatt_svr_chr_clock_format_val = bitclock_nvs_get_clock_format();
       rc = os_mbuf_append(ctxt->om, &gatt_svr_chr_clock_format_val,
                           sizeof(gatt_svr_chr_clock_format_val));
-      return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-    } else if (attr_handle == gatt_svr_chr_weather_path_val_handle) {
-      const char *weather_path = bitclock_nvs_get_weather_path();
-      if (weather_path == NULL) {
-        weather_path = "";
-      }
-      rc = os_mbuf_append(ctxt->om, weather_path, strlen(weather_path));
       return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
     } else if (attr_handle == gatt_svr_chr_wifi_status_val_handle) {
       static uint8_t wifi_status;
@@ -461,22 +418,6 @@ static int gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
         tzset();
       }
       return rc;
-    } else if (attr_handle == gatt_svr_chr_weather_path_val_handle) {
-      rc = gatt_svr_write(ctxt->om, // data
-                          1,        // min length
-                          sizeof(gatt_svr_chr_weather_path_val) -
-                              1, // max length - 1 for null terminator
-                          &gatt_svr_chr_weather_path_val, // dest
-                          &copy_len);
-      if (rc == 0) {
-        // Bluetooth doesn't add ending \0
-        gatt_svr_chr_weather_path_val[copy_len] = 0;
-        bitclock_nvs_set_weather_path(gatt_svr_chr_weather_path_val,
-                                      copy_len + 1);
-      }
-      xEventGroupSetBits(weather_event_group_handle,
-                         WEATHER_EVENT_LOCATION_CHANGED);
-      return rc;
     } else if (attr_handle == gatt_svr_chr_temperature_unit_val_handle) {
       rc = gatt_svr_write(
           ctxt->om,                                  // data
@@ -487,17 +428,6 @@ static int gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
       );
       if (rc == 0) {
         bitclock_nvs_set_temp_unit(gatt_svr_chr_temperature_unit_val);
-      }
-      return rc;
-    } else if (attr_handle == gatt_svr_chr_app_selection_val_handle) {
-      rc = gatt_svr_write(ctxt->om,                               // data
-                          sizeof(gatt_svr_chr_app_selection_val), // min length
-                          sizeof(gatt_svr_chr_app_selection_val), // max length
-                          &gatt_svr_chr_app_selection_val,        // dest
-                          &copy_len                               // length dest
-      );
-      if (rc == 0) {
-        bitclock_nvs_set_app_selection(gatt_svr_chr_app_selection_val);
       }
       return rc;
     } else if (attr_handle == gatt_svr_chr_clock_format_val_handle) {

@@ -10,7 +10,6 @@ typedef enum {
   VIEW_MODE_PASSKEY,
   VIEW_MODE_CLOCK,
   VIEW_MODE_AQI_GRID,
-  VIEW_MODE_WEATHER,
   VIEW_MODE_WIFI_SETUP,
   VIEW_MODE_WIFI_SETUP_FALLBACK,
   VIEW_MODE_MAX // Always keep this as the last element
