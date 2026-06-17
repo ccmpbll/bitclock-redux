@@ -22,7 +22,7 @@
     h2 { font-size: 1rem; margin: 0 0 12px; }
     .sub { color: var(--muted); font-size: .85rem; margin: 0 0 20px; }
     .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    .readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; }
+    .readings { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
     .reading { text-align: center; }
     .reading .val { font-size: 1.4rem; font-weight: 700; }
     .reading .lbl { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -113,9 +113,9 @@
         for (const [label, posix] of tz) {
           const o = document.createElement('option');
           o.value = posix; o.textContent = label;
-          if (posix === selected) o.selected = true;
           sel.appendChild(o);
         }
+        sel.value = selected;
       } catch (e) { /* leave empty on failure */ }
     }
 
