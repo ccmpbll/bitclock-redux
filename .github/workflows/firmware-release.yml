@@ -53,6 +53,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
+          generate_release_notes: true
           body: |
             **`bitclock-redux-full-${{ steps.version.outputs.VERSION }}.bin`** — full-flash image. Flash over USB at offset `0x0` (esptool / web flasher) for a first-time install.
 
