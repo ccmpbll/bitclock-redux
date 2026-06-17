@@ -95,18 +95,20 @@ static esp_err_t status_get(httpd_req_t *req) {
   if (!isfinite(humidity))
     humidity = 0;
   const char *tz = bitclock_nvs_get_tz();
+  const char *tz_label = bitclock_nvs_get_tz_label();
 
-  char json[512];
+  char json[640];
   snprintf(json, sizeof(json),
            "{\"temp_c\":%.1f,\"temp_f\":%.1f,\"humidity\":%.1f,\"co2\":%u,"
            "\"voc\":%ld,\"nox\":%ld,\"wifi_connected\":%s,\"temp_unit\":%u,"
-           "\"clock_format\":%u,\"timezone\":\"%s\",\"fw_version\":\"%s\"}",
+           "\"clock_format\":%u,\"timezone\":\"%s\",\"tz_label\":\"%s\","
+           "\"fw_version\":\"%s\"}",
            temp_c, celsius_to_fahrenheit(temp_c), humidity,
            scd4x_current_co2_ppm(),
            (long)sgp4x_current_voc_index(), (long)sgp41_current_nox_index(),
            bitclock_wifi_has_ip() ? "true" : "false",
            bitclock_nvs_get_temp_unit(), bitclock_nvs_get_clock_format(),
-           tz ? tz : "", BITCLOCK_FW_VERSION);
+           tz ? tz : "", tz_label ? tz_label : "", BITCLOCK_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
@@ -148,6 +150,9 @@ static esp_err_t settings_post(httpd_req_t *req) {
     setenv("TZ", val, 1);
     tzset();
   }
+
+  if (form_field(body, "tz_label", val, sizeof(val)) && val[0])
+    bitclock_nvs_set_tz_label(val, strlen(val) + 1);
 
   httpd_resp_set_type(req, "text/plain");
   httpd_resp_send(req, "OK", HTTPD_RESP_USE_STRLEN);

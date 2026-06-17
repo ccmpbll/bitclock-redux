@@ -16,6 +16,9 @@ esp_err_t bitclock_nvs_init();
 const char *bitclock_nvs_get_tz();
 esp_err_t bitclock_nvs_set_tz(const char *tz, size_t size);
 
+const char *bitclock_nvs_get_tz_label();
+esp_err_t bitclock_nvs_set_tz_label(const char *label, size_t size);
+
 bitclock_nvs_temp_unit_val_t bitclock_nvs_get_temp_unit();
 esp_err_t bitclock_nvs_set_temp_unit(bitclock_nvs_temp_unit_val_t unit);
 

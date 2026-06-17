@@ -8,6 +8,7 @@
 static const char *NVS_NAMESPACE =
     "canary"; // original project codename was canary
 static const char *NVS_ID_TIMEZONE = "tz";
+static const char *NVS_ID_TIMEZONE_LABEL = "tz_lbl";
 static const char *NVS_ID_TEMP_UNIT = "temp_unit";
 static const char *NVS_ID_CLOCK_FORMAT = "clk_fmt";
 
@@ -16,6 +17,7 @@ static bitclock_nvs_clock_format_val_t clock_format =
     BITCLOCK_NVS_CLOCK_FORMAT_VAL_NONE;
 
 static const char *timezone_str = NULL;
+static const char *timezone_label_str = NULL;
 
 esp_err_t bitclock_nvs_init() {
   nvs_handle_t handle;
@@ -53,6 +55,32 @@ esp_err_t bitclock_nvs_init() {
     } else {
       free(tz_buf);
       // Leave timezone_str NULL; user can re-set via web admin.
+    }
+  }
+
+  // Timezone label (display name for dropdown preselection)
+  size_t lbl_size = 0;
+  err = nvs_get_blob(handle, NVS_ID_TIMEZONE_LABEL, NULL, &lbl_size);
+  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+    return err;
+  }
+  if (lbl_size > 0) {
+    char *lbl_buf = malloc(lbl_size);
+    err = nvs_get_blob(handle, NVS_ID_TIMEZONE_LABEL, lbl_buf, &lbl_size);
+    if (err != ESP_OK) {
+      free(lbl_buf);
+      return err;
+    }
+    bool lbl_valid = (lbl_size > 0 && lbl_buf[lbl_size - 1] == '\0');
+    for (size_t i = 0; lbl_valid && i < lbl_size - 1; i++) {
+      unsigned char c = (unsigned char)lbl_buf[i];
+      if (c < 0x20 || c > 0x7E)
+        lbl_valid = false;
+    }
+    if (lbl_valid) {
+      timezone_label_str = lbl_buf;
+    } else {
+      free(lbl_buf);
     }
   }
 
@@ -119,6 +147,33 @@ esp_err_t bitclock_nvs_set_tz(const char *tz, size_t size) {
     memcpy(copy, tz, size);
     free((void *)timezone_str);
     timezone_str = copy;
+  }
+
+  return ESP_OK;
+}
+
+const char *bitclock_nvs_get_tz_label() { return timezone_label_str; }
+
+esp_err_t bitclock_nvs_set_tz_label(const char *label, size_t size) {
+  nvs_handle_t handle;
+  esp_err_t err;
+
+  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+  if (err != ESP_OK) {
+    return err;
+  }
+
+  err = nvs_set_blob(handle, NVS_ID_TIMEZONE_LABEL, label, size);
+  nvs_close(handle);
+  if (err != ESP_OK) {
+    return err;
+  }
+
+  char *copy = malloc(size);
+  if (copy) {
+    memcpy(copy, label, size);
+    free((void *)timezone_label_str);
+    timezone_label_str = copy;
   }
 
   return ESP_OK;

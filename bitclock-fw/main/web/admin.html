@@ -112,7 +112,7 @@
         sel.innerHTML = '';
         for (const [label, posix] of tz) {
           const o = document.createElement('option');
-          o.value = posix; o.textContent = label;
+          o.value = label; o.dataset.posix = posix; o.textContent = label;
           sel.appendChild(o);
         }
         sel.value = selected;
@@ -138,7 +138,7 @@
     async function initSettings(s) {
       $('clk').value = s.clock_format;
       $('unit').value = s.temp_unit;
-      return await loadTimezones(s.timezone);
+      return await loadTimezones(s.tz_label || '');
     }
 
     async function post(url, body) {
@@ -150,10 +150,14 @@
 
     async function saveSettings() {
       setText('settings-status', 'Saving…');
+      const sel = $('tz');
+      const tz_label = sel.value;
+      const tz_posix = sel.options[sel.selectedIndex]?.dataset.posix || tz_label;
       const body = new URLSearchParams({
         clock_format: $('clk').value,
         temp_unit: $('unit').value,
-        timezone: $('tz').value,
+        timezone: tz_posix,
+        tz_label: tz_label,
       });
       setText('settings-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
     }
