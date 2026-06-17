@@ -93,6 +93,8 @@
     <input type="password" id="mqtt-pw" placeholder="optional">
     <label for="mqtt-pfx">Topic prefix</label>
     <input type="text" id="mqtt-pfx" placeholder="bitclock">
+    <label for="mqtt-interval">Publish interval (seconds)</label>
+    <input type="text" id="mqtt-interval" placeholder="30">
     <button onclick="saveMqtt()">Save MQTT</button>
     <div class="status" id="mqtt-status"></div>
   </div>
@@ -166,7 +168,8 @@
       $('mqtt-host').value = s.mqtt_host || '';
       $('mqtt-port').value = s.mqtt_port || 1883;
       $('mqtt-user').value = s.mqtt_user || '';
-      $('mqtt-pfx').value  = s.mqtt_prefix || 'bitclock';
+      $('mqtt-pfx').value      = s.mqtt_prefix || 'bitclock';
+      $('mqtt-interval').value = s.mqtt_interval || 30;
       return await loadTimezones(s.tz_label || '');
     }
 
@@ -199,7 +202,8 @@
         mqtt_port:   $('mqtt-port').value || '1883',
         mqtt_user:   $('mqtt-user').value,
         mqtt_pass:   $('mqtt-pw').value,
-        mqtt_prefix: $('mqtt-pfx').value || 'bitclock',
+        mqtt_prefix:   $('mqtt-pfx').value || 'bitclock',
+        mqtt_interval: $('mqtt-interval').value || '30',
       });
       setText('mqtt-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
     }
