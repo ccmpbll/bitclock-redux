@@ -24,3 +24,6 @@ esp_err_t bitclock_nvs_set_temp_unit(bitclock_nvs_temp_unit_val_t unit);
 
 bitclock_nvs_clock_format_val_t bitclock_nvs_get_clock_format();
 esp_err_t bitclock_nvs_set_clock_format(bitclock_nvs_clock_format_val_t format);
+
+const char *bitclock_nvs_get_ntp_server();
+esp_err_t bitclock_nvs_set_ntp_server(const char *server, size_t size);

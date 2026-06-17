@@ -17,3 +17,4 @@ void wifi_task_run(void *pvParameters);
 bool bitclock_wifi_is_started();
 bool bitclock_wifi_has_ip();
 bool bitclock_wifi_has_sta_credentials();
+void bitclock_wifi_reinit_sntp(const char *server);

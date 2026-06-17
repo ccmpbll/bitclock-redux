@@ -11,6 +11,7 @@ static const char *NVS_ID_TIMEZONE = "tz";
 static const char *NVS_ID_TIMEZONE_LABEL = "tz_lbl";
 static const char *NVS_ID_TEMP_UNIT = "temp_unit";
 static const char *NVS_ID_CLOCK_FORMAT = "clk_fmt";
+static const char *NVS_ID_NTP_SERVER = "ntp_host";
 
 static bitclock_nvs_temp_unit_val_t temp_unit = BITCLOCK_NVS_TEMP_UNIT_VAL_NONE;
 static bitclock_nvs_clock_format_val_t clock_format =
@@ -18,6 +19,7 @@ static bitclock_nvs_clock_format_val_t clock_format =
 
 static const char *timezone_str = NULL;
 static const char *timezone_label_str = NULL;
+static const char *ntp_server_str = NULL;
 
 esp_err_t bitclock_nvs_init() {
   nvs_handle_t handle;
@@ -94,6 +96,32 @@ esp_err_t bitclock_nvs_init() {
   err = nvs_get_u8(handle, NVS_ID_CLOCK_FORMAT, &clock_format);
   if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
     return err;
+  }
+
+  // NTP server
+  size_t ntp_size = 0;
+  err = nvs_get_blob(handle, NVS_ID_NTP_SERVER, NULL, &ntp_size);
+  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+    return err;
+  }
+  if (ntp_size > 0) {
+    char *ntp_buf = malloc(ntp_size);
+    err = nvs_get_blob(handle, NVS_ID_NTP_SERVER, ntp_buf, &ntp_size);
+    if (err != ESP_OK) {
+      free(ntp_buf);
+      return err;
+    }
+    bool ntp_valid = (ntp_size > 0 && ntp_buf[ntp_size - 1] == '\0');
+    for (size_t i = 0; ntp_valid && i < ntp_size - 1; i++) {
+      unsigned char c = (unsigned char)ntp_buf[i];
+      if (c < 0x20 || c > 0x7E)
+        ntp_valid = false;
+    }
+    if (ntp_valid) {
+      ntp_server_str = ntp_buf;
+    } else {
+      free(ntp_buf);
+    }
   }
 
   nvs_close(handle);
@@ -200,6 +228,33 @@ esp_err_t bitclock_nvs_set_clock_format(
   clock_format = new_clock_format;
 
   nvs_close(handle);
+
+  return ESP_OK;
+}
+
+const char *bitclock_nvs_get_ntp_server() { return ntp_server_str; }
+
+esp_err_t bitclock_nvs_set_ntp_server(const char *server, size_t size) {
+  nvs_handle_t handle;
+  esp_err_t err;
+
+  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+  if (err != ESP_OK) {
+    return err;
+  }
+
+  err = nvs_set_blob(handle, NVS_ID_NTP_SERVER, server, size);
+  nvs_close(handle);
+  if (err != ESP_OK) {
+    return err;
+  }
+
+  char *copy = malloc(size);
+  if (copy) {
+    memcpy(copy, server, size);
+    free((void *)ntp_server_str);
+    ntp_server_str = copy;
+  }
 
   return ESP_OK;
 }
