@@ -30,6 +30,7 @@ lv_helper_view_mode_clock_data_t lv_helper_view_mode_clock_data;
 #define ROW_H         (SCREEN_H / NUM_ROWS)
 #define ROW_TOP(i)    ((i) * ROW_H + (ROW_H - SUBTEXT_H) / 2)
 
+static lv_obj_t *divider;
 static lv_obj_t *time_label;
 static lv_obj_t *day_label;
 static lv_obj_t *date_label;
@@ -64,6 +65,14 @@ static lv_obj_t *make_row_value(int row) {
 }
 
 void lv_helper_clock_create() {
+  // Divider line
+  divider = lv_obj_create(lv_screen_active());
+  lv_obj_set_size(divider, 1, SCREEN_H - 24);
+  lv_obj_set_style_bg_color(divider, lv_color_black(), 0);
+  lv_obj_set_style_border_width(divider, 0, 0);
+  lv_obj_set_style_radius(divider, 0, 0);
+  lv_obj_align(divider, LV_ALIGN_TOP_MID, DIVIDER_X - SCREEN_W / 2, 12);
+
   // Left panel: time, day, date
   time_label = make_left_label(&medium_number_style, LEFT_TOP_Y);
   day_label  = make_left_label(&sublabel_style,
