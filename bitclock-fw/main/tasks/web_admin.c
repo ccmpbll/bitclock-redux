@@ -72,6 +72,7 @@ static bool form_field(const char *body, const char *key, char *out,
 
 static esp_err_t root_get(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
   httpd_resp_send(req, (const char *)admin_html_start,
                   admin_html_end - admin_html_start);
   return ESP_OK;
