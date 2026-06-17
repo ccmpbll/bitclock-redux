@@ -77,10 +77,21 @@
     </select>
     <label for="tz">Timezone</label>
     <select id="tz"></select>
-    <label for="weather">Weather location</label>
-    <input type="text" id="weather" placeholder="e.g. /forecast/...">
     <button onclick="saveSettings()">Save settings</button>
     <div class="status" id="settings-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Weather location</h2>
+    <p class="sub" style="margin-bottom:4px">US only — uses the National Weather Service. Enter coordinates and look up.</p>
+    <div class="row">
+      <div><label for="lat">Latitude</label><input type="text" id="lat" placeholder="37.77"></div>
+      <div><label for="lon">Longitude</label><input type="text" id="lon" placeholder="-122.42"></div>
+    </div>
+    <button class="secondary" onclick="lookupWeather()">Look up</button>
+    <button onclick="saveWeather()">Save location</button>
+    <input type="hidden" id="weather">
+    <div class="status" id="weather-status"></div>
   </div>
 
   <div class="card">
@@ -103,8 +114,19 @@
   <p class="ver">Firmware <span id="ver">—</span></p>
 
   <script>
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, v) => { $(id).textContent = v; };
+
+    async function fetchStatus() {
+      try {
+        const r = await fetch('/api/status');
+        if (!r.ok) return null;
+        return await r.json();
+      } catch (e) { return null; }
+    }
+
     async function loadTimezones(selected) {
-      const sel = document.getElementById('tz');
+      const sel = $('tz');
       try {
         const tz = await (await fetch('/api/timezones')).json();
         sel.innerHTML = '';
@@ -117,66 +139,92 @@
       } catch (e) { /* leave empty on failure */ }
     }
 
-    async function refreshStatus() {
-      try {
-        const s = await (await fetch('/api/status')).json();
-        const unit = s.temp_unit === 2 ? 'F' : 'C';
-        const t = s.temp_unit === 2 ? s.temp_f : s.temp_c;
-        document.getElementById('r-temp').textContent = `${Math.round(t)}°${unit}`;
-        document.getElementById('r-hum').textContent = `${Math.round(s.humidity)}%`;
-        document.getElementById('r-co2').textContent = s.co2;
-        document.getElementById('r-voc').textContent = s.voc;
-        document.getElementById('r-nox').textContent = s.nox;
-        document.getElementById('wifi-state').textContent = s.wifi_connected ? 'Connected' : 'Disconnected';
-        document.getElementById('ver').textContent = s.fw_version;
-        document.getElementById('app').value = s.app_selection;
-        document.getElementById('clk').value = s.clock_format;
-        document.getElementById('unit').value = s.temp_unit;
-        if (!document.getElementById('weather').value)
-          document.getElementById('weather').value = s.weather_path || '';
-        if (!window._tzLoaded) { window._tzLoaded = true; loadTimezones(s.timezone); }
-      } catch (e) { /* ignore transient errors */ }
+    // Live readings only — safe to run on every poll without disturbing edits.
+    function updateReadings(s) {
+      const unit = s.temp_unit === 2 ? 'F' : 'C';
+      const t = s.temp_unit === 2 ? s.temp_f : s.temp_c;
+      setText('r-temp', `${Math.round(t)}°${unit}`);
+      setText('r-hum', `${Math.round(s.humidity)}%`);
+      setText('r-co2', s.co2);
+      setText('r-voc', s.voc);
+      setText('r-nox', s.nox);
+      setText('wifi-state', s.wifi_connected ? 'Connected' : 'Disconnected');
+      setText('ver', s.fw_version);
+    }
+
+    // Settings → form controls. Runs once on load so polling never clobbers
+    // a value the user is in the middle of changing.
+    async function initSettings(s) {
+      $('app').value = s.app_selection;
+      $('clk').value = s.clock_format;
+      $('unit').value = s.temp_unit;
+      $('weather').value = s.weather_path || '';
+      if (s.weather_path) setText('weather-status', `Current: ${s.weather_path}`);
+      await loadTimezones(s.timezone);
     }
 
     async function post(url, body) {
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
-      return r.ok;
+      try {
+        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+        return r.ok;
+      } catch (e) { return false; }
     }
 
     async function saveSettings() {
-      const el = document.getElementById('settings-status');
-      el.textContent = 'Saving…';
+      setText('settings-status', 'Saving…');
       const body = new URLSearchParams({
-        app_selection: document.getElementById('app').value,
-        clock_format: document.getElementById('clk').value,
-        temp_unit: document.getElementById('unit').value,
-        timezone: document.getElementById('tz').value,
-        weather_path: document.getElementById('weather').value,
+        app_selection: $('app').value,
+        clock_format: $('clk').value,
+        temp_unit: $('unit').value,
+        timezone: $('tz').value,
       });
-      el.textContent = await post('/api/settings', body) ? 'Saved.' : 'Failed.';
+      setText('settings-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
+    }
+
+    async function lookupWeather() {
+      const lat = $('lat').value.trim(), lon = $('lon').value.trim();
+      if (!lat || !lon) { setText('weather-status', 'Enter latitude and longitude.'); return; }
+      setText('weather-status', 'Looking up…');
+      try {
+        const d = await (await fetch(`https://api.weather.gov/points/${lat},${lon}`)).json();
+        const path = new URL(d.properties.forecast).pathname;
+        $('weather').value = path;
+        const loc = d.properties.relativeLocation && d.properties.relativeLocation.properties;
+        setText('weather-status', loc ? `Found ${loc.city}, ${loc.state} — click Save location` : `Found ${path} — click Save`);
+      } catch (e) {
+        setText('weather-status', 'No NWS location for those coordinates (US only).');
+      }
+    }
+
+    async function saveWeather() {
+      const path = $('weather').value;
+      if (!path) { setText('weather-status', 'Look up a location first.'); return; }
+      setText('weather-status', 'Saving…');
+      const ok = await post('/api/settings', new URLSearchParams({ weather_path: path }));
+      setText('weather-status', ok ? 'Saved.' : 'Failed.');
     }
 
     async function saveWifi() {
-      const el = document.getElementById('wifi-status');
-      el.textContent = 'Saving… device will reboot.';
-      const body = new URLSearchParams({
-        ssid: document.getElementById('ssid').value,
-        password: document.getElementById('pw').value,
-      });
+      setText('wifi-status', 'Saving… device will reboot.');
+      const body = new URLSearchParams({ ssid: $('ssid').value, password: $('pw').value });
       await post('/api/wifi', body);
     }
 
     async function uploadFirmware() {
-      const el = document.getElementById('ota-status');
-      const f = document.getElementById('fw').files[0];
-      if (!f) { el.textContent = 'Select a .bin file first.'; return; }
-      el.textContent = `Uploading ${(f.size/1024).toFixed(0)} KB…`;
-      const r = await fetch('/api/ota', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: f });
-      el.textContent = r.ok ? 'Flashed. Rebooting…' : 'Update failed.';
+      const f = $('fw').files[0];
+      if (!f) { setText('ota-status', 'Select a .bin file first.'); return; }
+      setText('ota-status', `Uploading ${(f.size/1024).toFixed(0)} KB…`);
+      try {
+        const r = await fetch('/api/ota', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: f });
+        setText('ota-status', r.ok ? 'Flashed. Rebooting…' : 'Update failed.');
+      } catch (e) { setText('ota-status', 'Update failed.'); }
     }
 
-    refreshStatus();
-    setInterval(refreshStatus, 3000);
+    (async () => {
+      const s = await fetchStatus();
+      if (s) { updateReadings(s); await initSettings(s); }
+      setInterval(async () => { const s = await fetchStatus(); if (s) updateReadings(s); }, 5000);
+    })();
   </script>
 </body>
 </html>

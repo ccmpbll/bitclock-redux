@@ -13,6 +13,7 @@
 #include "tasks/sht4x.h"
 #include "tasks/weather.h"
 #include "tasks/wifi.h"
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -84,7 +85,14 @@ static esp_err_t timezones_get(httpd_req_t *req) {
 }
 
 static esp_err_t status_get(httpd_req_t *req) {
+  // Sensors can report NaN before they have warmed up; emit 0 so the JSON
+  // stays valid (JSON has no NaN/Infinity literal).
   float temp_c = sht4x_current_temp_celsius();
+  float humidity = sht4x_current_relative_humidity();
+  if (!isfinite(temp_c))
+    temp_c = 0;
+  if (!isfinite(humidity))
+    humidity = 0;
   const char *tz = bitclock_nvs_get_tz();
   const char *weather = bitclock_nvs_get_weather_path();
 
@@ -94,8 +102,8 @@ static esp_err_t status_get(httpd_req_t *req) {
            "\"voc\":%ld,\"nox\":%ld,\"wifi_connected\":%s,\"temp_unit\":%u,"
            "\"clock_format\":%u,\"app_selection\":%u,\"timezone\":\"%s\","
            "\"weather_path\":\"%s\",\"fw_version\":\"%s\"}",
-           temp_c, celsius_to_fahrenheit(temp_c),
-           sht4x_current_relative_humidity(), scd4x_current_co2_ppm(),
+           temp_c, celsius_to_fahrenheit(temp_c), humidity,
+           scd4x_current_co2_ppm(),
            (long)sgp4x_current_voc_index(), (long)sgp41_current_nox_index(),
            bitclock_wifi_has_ip() ? "true" : "false",
            bitclock_nvs_get_temp_unit(), bitclock_nvs_get_clock_format(),
