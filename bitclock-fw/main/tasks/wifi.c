@@ -8,6 +8,7 @@
 #include "libs/http_buffer.h"
 #include "tasks/ble.h"
 #include "tasks/weather.h"
+#include "tasks/web_admin.h"
 #include "tasks/wifi_ap.h"
 
 static const char *TAG = "wifi";
@@ -58,6 +59,8 @@ static void event_handler(void *arg, esp_event_base_t event_base,
       xEventGroupSetBits(weather_event_group_handle,
                          WEATHER_EVENT_WIFI_CONNECTED);
       ble_notify_wifi_status_update();
+      // Idempotent — only starts the admin server + mDNS on first IP.
+      web_admin_start();
       break;
     case IP_EVENT_STA_LOST_IP:
       wifi_has_ip_val = false;
