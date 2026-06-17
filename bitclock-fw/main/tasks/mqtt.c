@@ -17,7 +17,7 @@ static esp_mqtt_client_handle_t client = NULL;
 static bool connected = false;
 static TaskHandle_t publish_task_handle = NULL;
 
-#define PUBLISH_INTERVAL_MS 30000
+#define PUBLISH_INTERVAL_DEFAULT_S 30
 
 static void get_device_id(char *buf, size_t len) {
   uint8_t mac[6];
@@ -127,7 +127,9 @@ static void mqtt_event_handler(void *arg, esp_event_base_t base,
 
 static void mqtt_publish_task(void *arg) {
   while (1) {
-    vTaskDelay(pdMS_TO_TICKS(PUBLISH_INTERVAL_MS));
+    uint16_t interval_s = bitclock_nvs_get_mqtt_interval();
+    if (interval_s == 0) interval_s = PUBLISH_INTERVAL_DEFAULT_S;
+    vTaskDelay(pdMS_TO_TICKS((uint32_t)interval_s * 1000));
     if (!connected || !client) continue;
     const char *prefix = bitclock_nvs_get_mqtt_prefix();
     if (!prefix || !prefix[0]) prefix = "bitclock";

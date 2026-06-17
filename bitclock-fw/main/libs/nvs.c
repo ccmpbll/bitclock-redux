@@ -16,7 +16,8 @@ static const char *NVS_ID_MQTT_HOST    = "mqtt_host";
 static const char *NVS_ID_MQTT_PORT    = "mqtt_port";
 static const char *NVS_ID_MQTT_USER    = "mqtt_user";
 static const char *NVS_ID_MQTT_PASS    = "mqtt_pass";
-static const char *NVS_ID_MQTT_PREFIX  = "mqtt_pfx";
+static const char *NVS_ID_MQTT_PREFIX   = "mqtt_pfx";
+static const char *NVS_ID_MQTT_INTERVAL = "mqtt_intv";
 
 static bitclock_nvs_temp_unit_val_t temp_unit = BITCLOCK_NVS_TEMP_UNIT_VAL_NONE;
 static bitclock_nvs_clock_format_val_t clock_format =
@@ -29,7 +30,8 @@ static const char *mqtt_host_str   = NULL;
 static uint16_t    mqtt_port_val   = 0;
 static const char *mqtt_user_str   = NULL;
 static const char *mqtt_pass_str   = NULL;
-static const char *mqtt_prefix_str = NULL;
+static const char *mqtt_prefix_str   = NULL;
+static uint16_t    mqtt_interval_val  = 0;
 
 esp_err_t bitclock_nvs_init() {
   nvs_handle_t handle;
@@ -158,6 +160,11 @@ esp_err_t bitclock_nvs_init() {
   LOAD_MQTT_STR(NVS_ID_MQTT_PREFIX, mqtt_prefix_str);
 
   err = nvs_get_u16(handle, NVS_ID_MQTT_PORT, &mqtt_port_val);
+  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+    return err;
+  }
+
+  err = nvs_get_u16(handle, NVS_ID_MQTT_INTERVAL, &mqtt_interval_val);
   if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
     return err;
   }
@@ -338,4 +345,15 @@ esp_err_t bitclock_nvs_set_mqtt_pass(const char *val, size_t size) {
 const char *bitclock_nvs_get_mqtt_prefix() { return mqtt_prefix_str; }
 esp_err_t bitclock_nvs_set_mqtt_prefix(const char *val, size_t size) {
   BLOB_SETTER(NVS_ID_MQTT_PREFIX, mqtt_prefix_str)
+}
+
+uint16_t bitclock_nvs_get_mqtt_interval() { return mqtt_interval_val; }
+esp_err_t bitclock_nvs_set_mqtt_interval(uint16_t seconds) {
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+  if (err != ESP_OK) return err;
+  err = nvs_set_u16(handle, NVS_ID_MQTT_INTERVAL, seconds);
+  nvs_close(handle);
+  if (err == ESP_OK) mqtt_interval_val = seconds;
+  return err;
 }

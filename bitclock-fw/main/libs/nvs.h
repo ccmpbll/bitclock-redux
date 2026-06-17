@@ -42,3 +42,6 @@ esp_err_t bitclock_nvs_set_mqtt_pass(const char *pass, size_t size);
 
 const char *bitclock_nvs_get_mqtt_prefix();
 esp_err_t bitclock_nvs_set_mqtt_prefix(const char *prefix, size_t size);
+
+uint16_t bitclock_nvs_get_mqtt_interval();
+esp_err_t bitclock_nvs_set_mqtt_interval(uint16_t seconds);

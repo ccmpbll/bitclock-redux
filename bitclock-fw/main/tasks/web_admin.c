@@ -109,7 +109,7 @@ static esp_err_t status_get(httpd_req_t *req) {
            "\"clock_format\":%u,\"timezone\":\"%s\",\"tz_label\":\"%s\","
            "\"ntp_server\":\"%s\",\"mqtt_connected\":%s,\"mqtt_host\":\"%s\","
            "\"mqtt_port\":%u,\"mqtt_prefix\":\"%s\",\"mqtt_user\":\"%s\","
-           "\"fw_version\":\"%s\"}",
+           "\"mqtt_interval\":%u,\"fw_version\":\"%s\"}",
            temp_c, celsius_to_fahrenheit(temp_c), humidity,
            scd4x_current_co2_ppm(),
            (long)sgp4x_current_voc_index(), (long)sgp41_current_nox_index(),
@@ -122,6 +122,7 @@ static esp_err_t status_get(httpd_req_t *req) {
            bitclock_nvs_get_mqtt_port() ? bitclock_nvs_get_mqtt_port() : 1883,
            mqtt_pfx  ? mqtt_pfx  : "bitclock",
            mqtt_user ? mqtt_user : "",
+           bitclock_nvs_get_mqtt_interval() ? bitclock_nvs_get_mqtt_interval() : 30,
            BITCLOCK_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
@@ -192,6 +193,10 @@ static esp_err_t settings_post(httpd_req_t *req) {
   }
   if (form_field(body, "mqtt_prefix", val, sizeof(val)) && val[0]) {
     bitclock_nvs_set_mqtt_prefix(val, strlen(val) + 1);
+    mqtt_changed = true;
+  }
+  if (form_field(body, "mqtt_interval", val, sizeof(val)) && val[0]) {
+    bitclock_nvs_set_mqtt_interval((uint16_t)atoi(val));
     mqtt_changed = true;
   }
   if (mqtt_changed) mqtt_task_restart();
