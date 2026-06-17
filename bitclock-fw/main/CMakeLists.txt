@@ -23,6 +23,7 @@ idf_component_register(
     "main.c"
     "tasks/eink_display.c"
     "tasks/led.c"
+    "tasks/mqtt.c"
     "tasks/scd4x.c"
     "tasks/sgp4x.c"
     "tasks/sharp_display.c"
@@ -48,6 +49,7 @@ idf_component_register(
     json
     lvgl
     mdns
+    mqtt
     nvs_flash
 )
 idf_build_set_property(COMPILE_OPTIONS "-DLV_CONF_PATH=${LV_CONF_PATH}" APPEND)

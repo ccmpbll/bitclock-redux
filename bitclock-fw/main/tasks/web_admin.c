@@ -5,6 +5,7 @@
 #include "esp_wifi.h"
 #include "libs/nvs.h"
 #include "libs/ota.h"
+#include "tasks/mqtt.h"
 #include "libs/sensor_utils.h"
 #include "libs/version.h"
 #include "mdns.h"
@@ -97,20 +98,31 @@ static esp_err_t status_get(httpd_req_t *req) {
   const char *tz = bitclock_nvs_get_tz();
   const char *tz_label = bitclock_nvs_get_tz_label();
   const char *ntp = bitclock_nvs_get_ntp_server();
+  const char *mqtt_host = bitclock_nvs_get_mqtt_host();
+  const char *mqtt_pfx  = bitclock_nvs_get_mqtt_prefix();
+  const char *mqtt_user = bitclock_nvs_get_mqtt_user();
 
-  char json[720];
+  char json[900];
   snprintf(json, sizeof(json),
            "{\"temp_c\":%.1f,\"temp_f\":%.1f,\"humidity\":%.1f,\"co2\":%u,"
            "\"voc\":%ld,\"nox\":%ld,\"wifi_connected\":%s,\"temp_unit\":%u,"
            "\"clock_format\":%u,\"timezone\":\"%s\",\"tz_label\":\"%s\","
-           "\"ntp_server\":\"%s\",\"fw_version\":\"%s\"}",
+           "\"ntp_server\":\"%s\",\"mqtt_connected\":%s,\"mqtt_host\":\"%s\","
+           "\"mqtt_port\":%u,\"mqtt_prefix\":\"%s\",\"mqtt_user\":\"%s\","
+           "\"fw_version\":\"%s\"}",
            temp_c, celsius_to_fahrenheit(temp_c), humidity,
            scd4x_current_co2_ppm(),
            (long)sgp4x_current_voc_index(), (long)sgp41_current_nox_index(),
            bitclock_wifi_has_ip() ? "true" : "false",
            bitclock_nvs_get_temp_unit(), bitclock_nvs_get_clock_format(),
            tz ? tz : "", tz_label ? tz_label : "",
-           ntp ? ntp : "pool.ntp.org", BITCLOCK_FW_VERSION);
+           ntp ? ntp : "pool.ntp.org",
+           mqtt_is_connected() ? "true" : "false",
+           mqtt_host ? mqtt_host : "",
+           bitclock_nvs_get_mqtt_port() ? bitclock_nvs_get_mqtt_port() : 1883,
+           mqtt_pfx  ? mqtt_pfx  : "bitclock",
+           mqtt_user ? mqtt_user : "",
+           BITCLOCK_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
@@ -160,6 +172,29 @@ static esp_err_t settings_post(httpd_req_t *req) {
     bitclock_nvs_set_ntp_server(val, strlen(val) + 1);
     bitclock_wifi_reinit_sntp(bitclock_nvs_get_ntp_server());
   }
+
+  bool mqtt_changed = false;
+  if (form_field(body, "mqtt_host", val, sizeof(val))) {
+    bitclock_nvs_set_mqtt_host(val, strlen(val) + 1);
+    mqtt_changed = true;
+  }
+  if (form_field(body, "mqtt_port", val, sizeof(val)) && val[0]) {
+    bitclock_nvs_set_mqtt_port((uint16_t)atoi(val));
+    mqtt_changed = true;
+  }
+  if (form_field(body, "mqtt_user", val, sizeof(val))) {
+    bitclock_nvs_set_mqtt_user(val, strlen(val) + 1);
+    mqtt_changed = true;
+  }
+  if (form_field(body, "mqtt_pass", val, sizeof(val)) && val[0]) {
+    bitclock_nvs_set_mqtt_pass(val, strlen(val) + 1);
+    mqtt_changed = true;
+  }
+  if (form_field(body, "mqtt_prefix", val, sizeof(val)) && val[0]) {
+    bitclock_nvs_set_mqtt_prefix(val, strlen(val) + 1);
+    mqtt_changed = true;
+  }
+  if (mqtt_changed) mqtt_task_restart();
 
   httpd_resp_set_type(req, "text/plain");
   httpd_resp_send(req, "OK", HTTPD_RESP_USE_STRLEN);

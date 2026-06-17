@@ -82,6 +82,22 @@
   </div>
 
   <div class="card">
+    <h2>MQTT</h2>
+    <label for="mqtt-host">Broker host</label>
+    <input type="text" id="mqtt-host" placeholder="192.168.1.x or hostname">
+    <label for="mqtt-port">Port</label>
+    <input type="text" id="mqtt-port" placeholder="1883">
+    <label for="mqtt-user">Username</label>
+    <input type="text" id="mqtt-user" placeholder="optional">
+    <label for="mqtt-pw">Password</label>
+    <input type="password" id="mqtt-pw" placeholder="optional">
+    <label for="mqtt-pfx">Topic prefix</label>
+    <input type="text" id="mqtt-pfx" placeholder="bitclock">
+    <button onclick="saveMqtt()">Save MQTT</button>
+    <div class="status" id="mqtt-status"></div>
+  </div>
+
+  <div class="card">
     <h2>Wi-Fi</h2>
     <label for="ssid">SSID</label>
     <input type="text" id="ssid">
@@ -147,6 +163,10 @@
       $('clk').value = s.clock_format;
       $('unit').value = s.temp_unit;
       $('ntp').value = s.ntp_server || 'pool.ntp.org';
+      $('mqtt-host').value = s.mqtt_host || '';
+      $('mqtt-port').value = s.mqtt_port || 1883;
+      $('mqtt-user').value = s.mqtt_user || '';
+      $('mqtt-pfx').value  = s.mqtt_prefix || 'bitclock';
       return await loadTimezones(s.tz_label || '');
     }
 
@@ -170,6 +190,18 @@
         ntp_server: $('ntp').value || 'pool.ntp.org',
       });
       setText('settings-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
+    }
+
+    async function saveMqtt() {
+      setText('mqtt-status', 'Saving…');
+      const body = new URLSearchParams({
+        mqtt_host:   $('mqtt-host').value,
+        mqtt_port:   $('mqtt-port').value || '1883',
+        mqtt_user:   $('mqtt-user').value,
+        mqtt_pass:   $('mqtt-pw').value,
+        mqtt_prefix: $('mqtt-pfx').value || 'bitclock',
+      });
+      setText('mqtt-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
     }
 
     async function saveWifi() {

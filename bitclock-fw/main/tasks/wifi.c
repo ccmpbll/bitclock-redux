@@ -5,6 +5,7 @@
 #include "esp_netif_sntp.h"
 #include "esp_wifi.h"
 #include "libs/nvs.h"
+#include "tasks/mqtt.h"
 #include "tasks/web_admin.h"
 #include "tasks/wifi_ap.h"
 
@@ -52,6 +53,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
                IP2STR(&event->ip_info.ip));
       // Idempotent — only starts the admin server + mDNS on first IP.
       web_admin_start();
+      mqtt_task_start();
       break;
     case IP_EVENT_STA_LOST_IP:
       wifi_has_ip_val = false;

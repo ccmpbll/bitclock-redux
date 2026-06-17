@@ -27,3 +27,18 @@ esp_err_t bitclock_nvs_set_clock_format(bitclock_nvs_clock_format_val_t format);
 
 const char *bitclock_nvs_get_ntp_server();
 esp_err_t bitclock_nvs_set_ntp_server(const char *server, size_t size);
+
+const char *bitclock_nvs_get_mqtt_host();
+esp_err_t bitclock_nvs_set_mqtt_host(const char *host, size_t size);
+
+uint16_t bitclock_nvs_get_mqtt_port();
+esp_err_t bitclock_nvs_set_mqtt_port(uint16_t port);
+
+const char *bitclock_nvs_get_mqtt_user();
+esp_err_t bitclock_nvs_set_mqtt_user(const char *user, size_t size);
+
+const char *bitclock_nvs_get_mqtt_pass();
+esp_err_t bitclock_nvs_set_mqtt_pass(const char *pass, size_t size);
+
+const char *bitclock_nvs_get_mqtt_prefix();
+esp_err_t bitclock_nvs_set_mqtt_prefix(const char *prefix, size_t size);
