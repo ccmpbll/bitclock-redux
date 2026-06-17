@@ -1,8 +1,6 @@
 set(LV_CONF_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lvgl/lv_conf.h")
 idf_component_register(
   SRCS
-    "libs/aqi_alert.c"
-    "libs/http_buffer.c"
     "libs/i2c.c"
     "libs/nvs.c"
     "libs/ota.c"
@@ -18,7 +16,6 @@ idf_component_register(
     "lvgl/lv_helper.c"
     "lvgl/styles.c"
     "lvgl/utils.c"
-    "lvgl/views/aqi_alert.c"
     "lvgl/views/aqi_grid.c"
     "lvgl/views/clock.c"
     "lvgl/views/logo.c"
@@ -43,7 +40,6 @@ idf_component_register(
     app_update
     bootloader_support
     driver
-    esp_http_client
     esp_http_server
     esp_netif
     esp_partition

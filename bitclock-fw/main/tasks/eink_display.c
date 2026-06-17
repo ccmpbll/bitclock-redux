@@ -11,12 +11,10 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "libs/aqi_alert.h"
 #include "libs/nvs.h"
 #include "libs/sensor_utils.h"
 #include "lvgl/lv_helper.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/views/aqi_alert.h"
 #include "lvgl/views/aqi_grid.h"
 #include "lvgl/views/clock.h"
 #include "lvgl/views/logo.h"
@@ -496,9 +494,7 @@ void eink_task_run(void *pvParameters) {
   frame_count++;
   vTaskDelay(pdMS_TO_TICKS(1500));
 
-  aqi_data_t aqi_data = {0};
   view_mode_t view_mode = VIEW_MODE_CLOCK;
-  aqi_alert_reason_t next_fake_aqi_alert = AQI_ALERT_TEMP_HIGH;
 
   while (1) {
     bool fast_update = frame_count % 120 != 0;
@@ -508,41 +504,12 @@ void eink_task_run(void *pvParameters) {
     lv_helper_view_mode_clock_data.hour24 =
         bitclock_nvs_get_clock_format() == BITCLOCK_NVS_CLOCK_FORMAT_VAL_24HR;
 
-    aqi_data.temp_celsius = sht4x_current_temp_celsius();
-    aqi_data.humidity = sht4x_current_relative_humidity();
-    aqi_data.co2_ppm = scd4x_current_co2_ppm();
-    aqi_data.voc_index = sgp4x_current_voc_index();
-    aqi_data.nox_index = sgp41_current_nox_index();
-
-    lv_helper_view_mode_aqi_data.temp_celsius = aqi_data.temp_celsius;
-    lv_helper_view_mode_aqi_data.humidity_pct = (uint8_t)roundf(aqi_data.humidity);
-    lv_helper_view_mode_aqi_data.co2_ppm = aqi_data.co2_ppm;
-    lv_helper_view_mode_aqi_data.voc_index = aqi_data.voc_index;
-    lv_helper_view_mode_aqi_data.nox_index = aqi_data.nox_index;
-
-    static bool demo_mode = false;
-    if (!demo_mode) {
-      lv_helper_aqi_alert_data.alert_reason = aqi_alerts_check(&aqi_data);
-    } else {
-      // Conference display mode
-      // If it is 0-5 seconds within the minute, or 30-35 seconds within the
-      // minute flash an aqi alert in a rotating fashion with the clock by
-      // setting lv_helper_aqi_alert_data.alert_reason to aqi_alert_t value.
-      // Don't use actual aqi alert data, just use the rotating alert.
-      // Use clock time for the rotation.
-      time_t curtime = lv_helper_view_mode_clock_data.curtime;
-      struct tm *timeinfo = localtime(&curtime);
-      if (timeinfo->tm_sec % 5 < 3) {
-        lv_helper_aqi_alert_data.alert_reason = next_fake_aqi_alert;
-      } else if (lv_helper_aqi_alert_data.alert_reason != AQI_ALERT_NONE) {
-        lv_helper_aqi_alert_data.alert_reason = AQI_ALERT_NONE;
-        if (next_fake_aqi_alert + 1 >= AQI_ALERT_COUNT) {
-          next_fake_aqi_alert = 1;
-        } else {
-          next_fake_aqi_alert++;
-        }
-      }
-    }
+    lv_helper_view_mode_aqi_data.temp_celsius = sht4x_current_temp_celsius();
+    lv_helper_view_mode_aqi_data.humidity_pct =
+        (uint8_t)roundf(sht4x_current_relative_humidity());
+    lv_helper_view_mode_aqi_data.co2_ppm = scd4x_current_co2_ppm();
+    lv_helper_view_mode_aqi_data.voc_index = sgp4x_current_voc_index();
+    lv_helper_view_mode_aqi_data.nox_index = sgp41_current_nox_index();
 
     EventBits_t wifi_bits = xEventGroupGetBits(wifi_event_group_handle);
     if (wifi_bits & WIFI_AP_MODE_ACTIVE_EVENT) {

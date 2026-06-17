@@ -25,6 +25,3 @@ TaskHandle_t sgp4xTask;
 TaskHandle_t wifiTask;
 #endif
 
-#ifdef BLE_TASK_ENABLED
-TaskHandle_t bleTask;
-#endif
