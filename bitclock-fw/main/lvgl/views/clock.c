@@ -15,6 +15,7 @@ lv_helper_view_mode_clock_data_t lv_helper_view_mode_clock_data;
 #define SCREEN_H      176
 #define DIVIDER_X     150   // left panel: 0–149, right panel: 150–263
 #define RIGHT_PAD     8
+#define LEFT_PAD      6
 
 // Left panel vertical layout
 #define TIME_H        60
@@ -42,9 +43,9 @@ static lv_obj_t *nox_lbl,  *nox_val;
 static lv_obj_t *make_left_label(lv_style_t *style, int y) {
   lv_obj_t *lbl = lv_label_create(lv_screen_active());
   lv_obj_add_style(lbl, style, LV_PART_MAIN);
-  lv_obj_set_width(lbl, DIVIDER_X);
+  lv_obj_set_width(lbl, DIVIDER_X - LEFT_PAD * 2);
   lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_pos(lbl, 0, y);
+  lv_obj_set_pos(lbl, LEFT_PAD, y);
   return lbl;
 }
 
