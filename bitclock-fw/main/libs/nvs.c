@@ -50,6 +50,7 @@ esp_err_t bitclock_nvs_init() {
   }
   if (required_size > 0) {
     char *tz_buf = malloc(required_size);
+    if (!tz_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; }
     err = nvs_get_blob(handle, NVS_ID_TIMEZONE, tz_buf, &required_size);
     if (err != ESP_OK) {
       free(tz_buf);
@@ -80,6 +81,7 @@ esp_err_t bitclock_nvs_init() {
   }
   if (lbl_size > 0) {
     char *lbl_buf = malloc(lbl_size);
+    if (!lbl_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; }
     err = nvs_get_blob(handle, NVS_ID_TIMEZONE_LABEL, lbl_buf, &lbl_size);
     if (err != ESP_OK) {
       free(lbl_buf);
@@ -118,6 +120,7 @@ esp_err_t bitclock_nvs_init() {
   }
   if (ntp_size > 0) {
     char *ntp_buf = malloc(ntp_size);
+    if (!ntp_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; }
     err = nvs_get_blob(handle, NVS_ID_NTP_SERVER, ntp_buf, &ntp_size);
     if (err != ESP_OK) {
       free(ntp_buf);
@@ -143,6 +146,7 @@ esp_err_t bitclock_nvs_init() {
     if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) { return err; } \
     if (_sz > 0) { \
       char *_buf = malloc(_sz); \
+      if (!_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; } \
       err = nvs_get_blob(handle, key, _buf, &_sz); \
       if (err != ESP_OK) { free(_buf); return err; } \
       bool _v = (_sz > 0 && _buf[_sz - 1] == '\0'); \

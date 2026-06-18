@@ -45,6 +45,7 @@ static lv_obj_t *make_left_label(lv_style_t *style, int y) {
   lv_obj_t *lbl = lv_label_create(lv_screen_active());
   lv_obj_add_style(lbl, style, LV_PART_MAIN);
   lv_obj_set_width(lbl, DIVIDER_X - LEFT_PAD * 2);
+  lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
   lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_pos(lbl, LEFT_PAD, y);
   return lbl;

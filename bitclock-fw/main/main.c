@@ -98,7 +98,7 @@ void app_main(void) {
 #endif
 
 #ifdef SGP4X_TASK_ENABLED
-  sgp4xTask = xTaskCreateStatic(sgp4x_task_run, "scd4x",
+  sgp4xTask = xTaskCreateStatic(sgp4x_task_run, "sgp4x",
                                 SGP4X_STACK_SIZE,    // ulStackDepth
                                 (void *)1,           // pvParamters
                                 SGP4X_TASK_PRIORITY, // uxPriority
