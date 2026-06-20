@@ -66,6 +66,10 @@ With the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) en
 
 Discovery config topics are published with `retain=1` on connect, so Home Assistant picks them up even if it was offline when the device connected. Changing the temperature unit in the web admin updates the HA entity unit automatically on the next reconnect.
 
+## Case
+
+A 3D-printable case is available on [Printables](https://www.printables.com/model/1759743-bitclock-redux-case). STL and STEP files are also included in the [`case/`](case/) directory.
+
 ## Supported hardware
 
 **PCB rev3a only** — the first and only commercially sold revision of the bitclock hardware (ESP32-S3, e-ink display). Earlier prototype revisions (rev1 ESP32-C3, Seeed ESP32-S3) are not supported by this fork and their build targets have been removed.
