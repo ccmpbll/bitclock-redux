@@ -1,4 +1,4 @@
-<img src="https://github.com/user-attachments/assets/a1be3895-0399-4e95-8b5f-d52c59792a22" width="500" alt="bitclock" />
+<img src="images/bitclock-redux.png" width="500" alt="bitclock redux" />
 
 # bitclock-redux
 
