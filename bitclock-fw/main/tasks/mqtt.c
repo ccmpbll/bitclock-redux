@@ -84,27 +84,24 @@ static void publish_state(esp_mqtt_client_handle_t c, const char *prefix) {
   bool fahrenheit = bitclock_nvs_get_temp_unit() == BITCLOCK_NVS_TEMP_UNIT_VAL_FAHRENHEIT;
   float temp = fahrenheit ? celsius_to_fahrenheit(temp_c) : temp_c;
 
+  struct {
+    const char *key;
+    const char *fmt;
+    double value;
+  } readings[] = {
+      {"temp",     "%.1f", temp},
+      {"humidity", "%.1f", humidity},
+      {"co2",      "%.0f", (double)scd4x_current_co2_ppm()},
+      {"voc",      "%.0f", (double)(long)sgp4x_current_voc_index()},
+      {"nox",      "%.0f", (double)(long)sgp41_current_nox_index()},
+  };
+
   char topic[128], payload[32];
-
-  snprintf(topic, sizeof(topic), "%s/temp", prefix);
-  snprintf(payload, sizeof(payload), "%.1f", temp);
-  esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
-
-  snprintf(topic, sizeof(topic), "%s/humidity", prefix);
-  snprintf(payload, sizeof(payload), "%.1f", humidity);
-  esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
-
-  snprintf(topic, sizeof(topic), "%s/co2", prefix);
-  snprintf(payload, sizeof(payload), "%u", scd4x_current_co2_ppm());
-  esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
-
-  snprintf(topic, sizeof(topic), "%s/voc", prefix);
-  snprintf(payload, sizeof(payload), "%ld", (long)sgp4x_current_voc_index());
-  esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
-
-  snprintf(topic, sizeof(topic), "%s/nox", prefix);
-  snprintf(payload, sizeof(payload), "%ld", (long)sgp41_current_nox_index());
-  esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
+  for (int i = 0; i < 5; i++) {
+    snprintf(topic, sizeof(topic), "%s/%s", prefix, readings[i].key);
+    snprintf(payload, sizeof(payload), readings[i].fmt, readings[i].value);
+    esp_mqtt_client_publish(c, topic, payload, 0, 1, 0);
+  }
 }
 
 static void mqtt_event_handler(void *arg, esp_event_base_t base,

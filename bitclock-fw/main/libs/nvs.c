@@ -33,6 +33,41 @@ static const char *mqtt_pass_str   = NULL;
 static const char *mqtt_prefix_str   = NULL;
 static uint16_t    mqtt_interval_val  = 0;
 
+// Validated blob load, shared by every string setting below. Corrupted NVS
+// blobs (e.g. from a dangling-pointer write or pre-web-admin firmware) can
+// contain binary bytes that break JSON when embedded in /api/status, so a
+// loaded string must be null-terminated printable ASCII or it's dropped.
+#define LOAD_NVS_STR(key, dest) do { \
+  size_t _sz = 0; \
+  err = nvs_get_blob(handle, key, NULL, &_sz); \
+  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) { return err; } \
+  if (_sz > 0) { \
+    char *_buf = malloc(_sz); \
+    if (!_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; } \
+    err = nvs_get_blob(handle, key, _buf, &_sz); \
+    if (err != ESP_OK) { free(_buf); return err; } \
+    bool _v = (_sz > 0 && _buf[_sz - 1] == '\0'); \
+    for (size_t _i = 0; _v && _i < _sz - 1; _i++) { \
+      unsigned char _c = (unsigned char)_buf[_i]; \
+      if (_c < 0x20 || _c > 0x7E) _v = false; \
+    } \
+    if (_v) { dest = _buf; } else { free(_buf); } \
+  } \
+} while (0)
+
+// Shared helper for blob setters: write, then keep a heap copy so we never
+// hold a pointer into the caller's stack frame.
+#define BLOB_SETTER(key, dest) \
+  nvs_handle_t handle; esp_err_t err; \
+  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle); \
+  if (err != ESP_OK) return err; \
+  err = nvs_set_blob(handle, key, val, size); \
+  nvs_close(handle); \
+  if (err != ESP_OK) return err; \
+  char *copy = malloc(size); \
+  if (copy) { memcpy(copy, val, size); free((void *)dest); dest = copy; } \
+  return ESP_OK;
+
 esp_err_t bitclock_nvs_init() {
   nvs_handle_t handle;
   esp_err_t err;
@@ -42,63 +77,8 @@ esp_err_t bitclock_nvs_init() {
     return err;
   }
 
-  // Timezone
-  size_t required_size = 0;
-  err = nvs_get_blob(handle, NVS_ID_TIMEZONE, NULL, &required_size);
-  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
-    return err;
-  }
-  if (required_size > 0) {
-    char *tz_buf = malloc(required_size);
-    if (!tz_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; }
-    err = nvs_get_blob(handle, NVS_ID_TIMEZONE, tz_buf, &required_size);
-    if (err != ESP_OK) {
-      free(tz_buf);
-      return err;
-    }
-    // Validate: must be null-terminated printable ASCII. Corrupted NVS blobs
-    // (e.g. from a dangling-pointer write or pre-web-admin firmware) contain
-    // binary bytes that break JSON when embedded in /api/status.
-    bool valid = (required_size > 0 && tz_buf[required_size - 1] == '\0');
-    for (size_t i = 0; valid && i < required_size - 1; i++) {
-      unsigned char c = (unsigned char)tz_buf[i];
-      if (c < 0x20 || c > 0x7E)
-        valid = false;
-    }
-    if (valid) {
-      timezone_str = tz_buf;
-    } else {
-      free(tz_buf);
-      // Leave timezone_str NULL; user can re-set via web admin.
-    }
-  }
-
-  // Timezone label (display name for dropdown preselection)
-  size_t lbl_size = 0;
-  err = nvs_get_blob(handle, NVS_ID_TIMEZONE_LABEL, NULL, &lbl_size);
-  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
-    return err;
-  }
-  if (lbl_size > 0) {
-    char *lbl_buf = malloc(lbl_size);
-    if (!lbl_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; }
-    err = nvs_get_blob(handle, NVS_ID_TIMEZONE_LABEL, lbl_buf, &lbl_size);
-    if (err != ESP_OK) {
-      free(lbl_buf);
-      return err;
-    }
-    bool lbl_valid = (lbl_size > 0 && lbl_buf[lbl_size - 1] == '\0');
-    for (size_t i = 0; lbl_valid && i < lbl_size - 1; i++) {
-      unsigned char c = (unsigned char)lbl_buf[i];
-      if (c < 0x20 || c > 0x7E)
-        lbl_valid = false;
-    }
-    if (lbl_valid) {
-      timezone_label_str = lbl_buf;
-    } else {
-      free(lbl_buf);
-    }
-  }
+  LOAD_NVS_STR(NVS_ID_TIMEZONE,       timezone_str);
+  LOAD_NVS_STR(NVS_ID_TIMEZONE_LABEL, timezone_label_str);
 
   // Temp unit
   err = nvs_get_u8(handle, NVS_ID_TEMP_UNIT, &temp_unit);
@@ -112,56 +92,11 @@ esp_err_t bitclock_nvs_init() {
     return err;
   }
 
-  // NTP server
-  size_t ntp_size = 0;
-  err = nvs_get_blob(handle, NVS_ID_NTP_SERVER, NULL, &ntp_size);
-  if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
-    return err;
-  }
-  if (ntp_size > 0) {
-    char *ntp_buf = malloc(ntp_size);
-    if (!ntp_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; }
-    err = nvs_get_blob(handle, NVS_ID_NTP_SERVER, ntp_buf, &ntp_size);
-    if (err != ESP_OK) {
-      free(ntp_buf);
-      return err;
-    }
-    bool ntp_valid = (ntp_size > 0 && ntp_buf[ntp_size - 1] == '\0');
-    for (size_t i = 0; ntp_valid && i < ntp_size - 1; i++) {
-      unsigned char c = (unsigned char)ntp_buf[i];
-      if (c < 0x20 || c > 0x7E)
-        ntp_valid = false;
-    }
-    if (ntp_valid) {
-      ntp_server_str = ntp_buf;
-    } else {
-      free(ntp_buf);
-    }
-  }
-
-  // MQTT config (blob keys with same validation pattern)
-  #define LOAD_MQTT_STR(key, dest) do { \
-    size_t _sz = 0; \
-    err = nvs_get_blob(handle, key, NULL, &_sz); \
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) { return err; } \
-    if (_sz > 0) { \
-      char *_buf = malloc(_sz); \
-      if (!_buf) { nvs_close(handle); return ESP_ERR_NO_MEM; } \
-      err = nvs_get_blob(handle, key, _buf, &_sz); \
-      if (err != ESP_OK) { free(_buf); return err; } \
-      bool _v = (_sz > 0 && _buf[_sz - 1] == '\0'); \
-      for (size_t _i = 0; _v && _i < _sz - 1; _i++) { \
-        unsigned char _c = (unsigned char)_buf[_i]; \
-        if (_c < 0x20 || _c > 0x7E) _v = false; \
-      } \
-      if (_v) { dest = _buf; } else { free(_buf); } \
-    } \
-  } while (0)
-
-  LOAD_MQTT_STR(NVS_ID_MQTT_HOST,   mqtt_host_str);
-  LOAD_MQTT_STR(NVS_ID_MQTT_USER,   mqtt_user_str);
-  LOAD_MQTT_STR(NVS_ID_MQTT_PASS,   mqtt_pass_str);
-  LOAD_MQTT_STR(NVS_ID_MQTT_PREFIX, mqtt_prefix_str);
+  LOAD_NVS_STR(NVS_ID_NTP_SERVER,   ntp_server_str);
+  LOAD_NVS_STR(NVS_ID_MQTT_HOST,    mqtt_host_str);
+  LOAD_NVS_STR(NVS_ID_MQTT_USER,    mqtt_user_str);
+  LOAD_NVS_STR(NVS_ID_MQTT_PASS,    mqtt_pass_str);
+  LOAD_NVS_STR(NVS_ID_MQTT_PREFIX,  mqtt_prefix_str);
 
   err = nvs_get_u16(handle, NVS_ID_MQTT_PORT, &mqtt_port_val);
   if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
@@ -202,58 +137,13 @@ bitclock_nvs_set_temp_unit(bitclock_nvs_temp_unit_val_t new_temp_unit) {
 }
 
 const char *bitclock_nvs_get_tz() { return timezone_str; }
-
-esp_err_t bitclock_nvs_set_tz(const char *tz, size_t size) {
-  nvs_handle_t handle;
-  esp_err_t err;
-
-  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
-  if (err != ESP_OK) {
-    return err;
-  }
-
-  err = nvs_set_blob(handle, NVS_ID_TIMEZONE, tz, size);
-  nvs_close(handle);
-  if (err != ESP_OK) {
-    return err;
-  }
-
-  // Copy to heap so we never hold a pointer into the caller's stack frame.
-  char *copy = malloc(size);
-  if (copy) {
-    memcpy(copy, tz, size);
-    free((void *)timezone_str);
-    timezone_str = copy;
-  }
-
-  return ESP_OK;
+esp_err_t bitclock_nvs_set_tz(const char *val, size_t size) {
+  BLOB_SETTER(NVS_ID_TIMEZONE, timezone_str)
 }
 
 const char *bitclock_nvs_get_tz_label() { return timezone_label_str; }
-
-esp_err_t bitclock_nvs_set_tz_label(const char *label, size_t size) {
-  nvs_handle_t handle;
-  esp_err_t err;
-
-  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
-  if (err != ESP_OK) {
-    return err;
-  }
-
-  err = nvs_set_blob(handle, NVS_ID_TIMEZONE_LABEL, label, size);
-  nvs_close(handle);
-  if (err != ESP_OK) {
-    return err;
-  }
-
-  char *copy = malloc(size);
-  if (copy) {
-    memcpy(copy, label, size);
-    free((void *)timezone_label_str);
-    timezone_label_str = copy;
-  }
-
-  return ESP_OK;
+esp_err_t bitclock_nvs_set_tz_label(const char *val, size_t size) {
+  BLOB_SETTER(NVS_ID_TIMEZONE_LABEL, timezone_label_str)
 }
 
 bitclock_nvs_clock_format_val_t bitclock_nvs_get_clock_format() {
@@ -282,43 +172,9 @@ esp_err_t bitclock_nvs_set_clock_format(
 }
 
 const char *bitclock_nvs_get_ntp_server() { return ntp_server_str; }
-
-esp_err_t bitclock_nvs_set_ntp_server(const char *server, size_t size) {
-  nvs_handle_t handle;
-  esp_err_t err;
-
-  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
-  if (err != ESP_OK) {
-    return err;
-  }
-
-  err = nvs_set_blob(handle, NVS_ID_NTP_SERVER, server, size);
-  nvs_close(handle);
-  if (err != ESP_OK) {
-    return err;
-  }
-
-  char *copy = malloc(size);
-  if (copy) {
-    memcpy(copy, server, size);
-    free((void *)ntp_server_str);
-    ntp_server_str = copy;
-  }
-
-  return ESP_OK;
+esp_err_t bitclock_nvs_set_ntp_server(const char *val, size_t size) {
+  BLOB_SETTER(NVS_ID_NTP_SERVER, ntp_server_str)
 }
-
-// Shared helper for blob setters
-#define BLOB_SETTER(key, dest) \
-  nvs_handle_t handle; esp_err_t err; \
-  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle); \
-  if (err != ESP_OK) return err; \
-  err = nvs_set_blob(handle, key, val, size); \
-  nvs_close(handle); \
-  if (err != ESP_OK) return err; \
-  char *copy = malloc(size); \
-  if (copy) { memcpy(copy, val, size); free((void *)dest); dest = copy; } \
-  return ESP_OK;
 
 const char *bitclock_nvs_get_mqtt_host() { return mqtt_host_str; }
 esp_err_t bitclock_nvs_set_mqtt_host(const char *val, size_t size) {
