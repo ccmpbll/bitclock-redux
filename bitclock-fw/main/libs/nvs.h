@@ -13,6 +13,9 @@ typedef uint8_t bitclock_nvs_clock_format_val_t;
 
 esp_err_t bitclock_nvs_init();
 
+const char *bitclock_nvs_get_hostname();
+esp_err_t bitclock_nvs_set_hostname(const char *hostname, size_t size);
+
 const char *bitclock_nvs_get_tz();
 esp_err_t bitclock_nvs_set_tz(const char *tz, size_t size);
 

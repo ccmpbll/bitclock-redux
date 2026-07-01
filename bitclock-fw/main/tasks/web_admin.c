@@ -19,6 +19,7 @@
 #include <time.h>
 
 static const char *TAG = "web_admin";
+#define DEFAULT_HOSTNAME "bitclock"
 
 static httpd_handle_t server = NULL;
 
@@ -95,6 +96,7 @@ static esp_err_t status_get(httpd_req_t *req) {
     temp_c = 0;
   if (!isfinite(humidity))
     humidity = 0;
+  const char *hostname = bitclock_nvs_get_hostname();
   const char *tz = bitclock_nvs_get_tz();
   const char *tz_label = bitclock_nvs_get_tz_label();
   const char *ntp = bitclock_nvs_get_ntp_server();
@@ -102,11 +104,11 @@ static esp_err_t status_get(httpd_req_t *req) {
   const char *mqtt_pfx  = bitclock_nvs_get_mqtt_prefix();
   const char *mqtt_user = bitclock_nvs_get_mqtt_user();
 
-  char json[900];
+  char json[1000];
   snprintf(json, sizeof(json),
            "{\"temp_c\":%.1f,\"temp_f\":%.1f,\"humidity\":%.1f,\"co2\":%u,"
            "\"voc\":%ld,\"nox\":%ld,\"wifi_connected\":%s,\"temp_unit\":%u,"
-           "\"clock_format\":%u,\"timezone\":\"%s\",\"tz_label\":\"%s\","
+           "\"clock_format\":%u,\"hostname\":\"%s\",\"timezone\":\"%s\",\"tz_label\":\"%s\","
            "\"ntp_server\":\"%s\",\"mqtt_connected\":%s,\"mqtt_host\":\"%s\","
            "\"mqtt_port\":%u,\"mqtt_prefix\":\"%s\",\"mqtt_user\":\"%s\","
            "\"mqtt_interval\":%u,\"fw_version\":\"%s\"}",
@@ -115,6 +117,7 @@ static esp_err_t status_get(httpd_req_t *req) {
            (long)sgp4x_current_voc_index(), (long)sgp41_current_nox_index(),
            bitclock_wifi_has_ip() ? "true" : "false",
            bitclock_nvs_get_temp_unit(), bitclock_nvs_get_clock_format(),
+           hostname ? hostname : DEFAULT_HOSTNAME,
            tz ? tz : "", tz_label ? tz_label : "",
            ntp ? ntp : "pool.ntp.org",
            mqtt_is_connected() ? "true" : "false",
@@ -153,6 +156,12 @@ static esp_err_t settings_post(httpd_req_t *req) {
   }
 
   char val[256];
+
+  if (form_field(body, "hostname", val, sizeof(val)) && val[0]) {
+    bitclock_nvs_set_hostname(val, strlen(val) + 1);
+    mdns_hostname_set(val);
+    mdns_instance_name_set(val);
+  }
 
   if (form_field(body, "temp_unit", val, sizeof(val)) && val[0])
     bitclock_nvs_set_temp_unit((bitclock_nvs_temp_unit_val_t)atoi(val));
@@ -289,8 +298,11 @@ static void mdns_start() {
     ESP_LOGE(TAG, "mdns init failed: %d", err);
     return;
   }
-  mdns_hostname_set("bitclock");
-  mdns_instance_name_set("Bitclock");
+  const char *hostname = bitclock_nvs_get_hostname();
+  if (!hostname || !hostname[0])
+    hostname = DEFAULT_HOSTNAME;
+  mdns_hostname_set(hostname);
+  mdns_instance_name_set(hostname);
   mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
 }
 
@@ -326,7 +338,10 @@ void web_admin_start() {
     httpd_register_uri_handler(server, &routes[i]);
   }
 
-  ESP_LOGI(TAG, "Admin server started at http://bitclock.local");
+  const char *hostname = bitclock_nvs_get_hostname();
+  if (!hostname || !hostname[0])
+    hostname = DEFAULT_HOSTNAME;
+  ESP_LOGI(TAG, "Admin server started at http://%s.local", hostname);
 }
 
 void web_admin_stop() {

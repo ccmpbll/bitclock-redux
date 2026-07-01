@@ -63,6 +63,9 @@
 
   <div class="card">
     <h2>Display</h2>
+    <label for="hostname">Hostname</label>
+    <input type="text" id="hostname" placeholder="bitclock">
+    <p class="hint">Device shows up as <code id="hostname-preview">bitclock</code>.local on the network.</p>
     <label for="clk">Clock format</label>
     <select id="clk">
       <option value="1">12 hour</option>
@@ -162,6 +165,8 @@
     // Settings → controls. Runs once on load so polling never clobbers a value
     // the user is in the middle of changing.
     async function initSettings(s) {
+      $('hostname').value = s.hostname || 'bitclock';
+      $('hostname-preview').textContent = s.hostname || 'bitclock';
       $('clk').value = s.clock_format;
       $('unit').value = s.temp_unit;
       $('ntp').value = s.ntp_server || 'pool.ntp.org';
@@ -185,14 +190,18 @@
       const sel = $('tz');
       const tz_label = sel.value;
       const tz_posix = sel.options[sel.selectedIndex]?.dataset.posix || tz_label;
+      const hostname = $('hostname').value.trim() || 'bitclock';
       const body = new URLSearchParams({
+        hostname: hostname,
         clock_format: $('clk').value,
         temp_unit: $('unit').value,
         timezone: tz_posix,
         tz_label: tz_label,
         ntp_server: $('ntp').value || 'pool.ntp.org',
       });
-      setText('settings-status', await post('/api/settings', body) ? 'Saved.' : 'Failed.');
+      const ok = await post('/api/settings', body);
+      if (ok) $('hostname-preview').textContent = hostname;
+      setText('settings-status', ok ? 'Saved.' : 'Failed.');
     }
 
     async function saveMqtt() {

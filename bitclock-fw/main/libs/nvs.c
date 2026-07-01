@@ -7,6 +7,7 @@
 
 static const char *NVS_NAMESPACE =
     "canary"; // original project codename was canary
+static const char *NVS_ID_HOSTNAME = "hostname";
 static const char *NVS_ID_TIMEZONE = "tz";
 static const char *NVS_ID_TIMEZONE_LABEL = "tz_lbl";
 static const char *NVS_ID_TEMP_UNIT = "temp_unit";
@@ -23,6 +24,7 @@ static bitclock_nvs_temp_unit_val_t temp_unit = BITCLOCK_NVS_TEMP_UNIT_VAL_NONE;
 static bitclock_nvs_clock_format_val_t clock_format =
     BITCLOCK_NVS_CLOCK_FORMAT_VAL_NONE;
 
+static const char *hostname_str = NULL;
 static const char *timezone_str = NULL;
 static const char *timezone_label_str = NULL;
 static const char *ntp_server_str = NULL;
@@ -77,6 +79,7 @@ esp_err_t bitclock_nvs_init() {
     return err;
   }
 
+  LOAD_NVS_STR(NVS_ID_HOSTNAME,       hostname_str);
   LOAD_NVS_STR(NVS_ID_TIMEZONE,       timezone_str);
   LOAD_NVS_STR(NVS_ID_TIMEZONE_LABEL, timezone_label_str);
 
@@ -134,6 +137,11 @@ bitclock_nvs_set_temp_unit(bitclock_nvs_temp_unit_val_t new_temp_unit) {
   nvs_close(handle);
 
   return ESP_OK;
+}
+
+const char *bitclock_nvs_get_hostname() { return hostname_str; }
+esp_err_t bitclock_nvs_set_hostname(const char *val, size_t size) {
+  BLOB_SETTER(NVS_ID_HOSTNAME, hostname_str)
 }
 
 const char *bitclock_nvs_get_tz() { return timezone_str; }
